@@ -599,7 +599,7 @@
         <div class="inst-logo">🏫</div>
         <div class="inst-info">
             <h1>I.E. N° 3055 — Tupac Amaru</h1>
-            <p>Comas · Monitoreo 3er Grado</p>
+            <p>Comas · Monitoreo 2024</p>
         </div>
         <div class="inst-badge">
             <div class="badge-label">Diario del Aula</div>
@@ -635,7 +635,7 @@
     </div>
 
     <div class="reporte-footer">
-        Generado por <strong>Plataforma de Monitoreo</strong> · Datos sincronizados desde Google Sheets
+        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
     </div>
 </div>
 
@@ -981,7 +981,7 @@ function mostrarRegistro() {
                     <div class="sec-icon naranja">📝</div>
                     <span class="sec-title">Observaciones del docente</span>
                 </div>
-                <div class="obs-box">${reg.obs.replace(/\n/g, '<br>')}</div>
+                <div class="obs-box">${convertirURLsEnEnlaces(reg.obs).replace(/\n/g, '<br>')}</div>
             </div>`;
     }
 
