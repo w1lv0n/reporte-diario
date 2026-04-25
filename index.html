@@ -1,1057 +1,613 @@
+// ══════════════════════════════════════════════════════════════
+//  GOOGLE APPS SCRIPT — REPORTE DIARIO
+//  Backend para formulario de entrada de datos
+// ══════════════════════════════════════════════════════════════
+
+// ID del Google Sheet y nombre de la hoja
+const SHEET_ID = "1LzIm3auoKch608lM5lDSCYm2sSMAsoL8rFvXN_u0NNc";
+const SHEET_NAME = "REPORTE";
+
+// ──────────────────────────────────────────────────────────────
+//  1. doGet — Sirve la página web
+// ──────────────────────────────────────────────────────────────
+function doGet() {
+    return HtmlService.createHtmlOutput(getHTML())
+        .setWidth(1200)
+        .setHeight(800)
+        .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+}
+
+// ──────────────────────────────────────────────────────────────
+//  2. getAlumnos — Extrae lista de alumnos del Sheet
+// ──────────────────────────────────────────────────────────────
+function getAlumnos() {
+    try {
+        const ss = SpreadsheetApp.openById(SHEET_ID);
+        const sheet = ss.getSheetByName(SHEET_NAME);
+        
+        // Fila 1 = headers. Columna B = "Alumno"
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const alumnoColIndex = headers.findIndex(h => h.toLowerCase().includes("alumno")) + 1; // +1 porque getRange es 1-indexed
+        
+        if (alumnoColIndex === 0) {
+            return { error: "Columna 'Alumno' no encontrada" };
+        }
+        
+        // Leer todos los alumnos únicos (desde fila 2 en adelante)
+        const lastRow = sheet.getLastRow();
+        const alumnoCol = sheet.getRange(2, alumnoColIndex, lastRow - 1, 1).getValues();
+        
+        // Filtrar únicos y ordenar
+        const alumnos = [...new Set(alumnoCol.flat().filter(a => a && a.trim()))].sort();
+        
+        return { success: true, alumnos: alumnos };
+    } catch (e) {
+        return { error: e.toString() };
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  3. guardarReporte — Guarda el reporte en Google Sheets
+// ──────────────────────────────────────────────────────────────
+function guardarReporte(datos) {
+    /*
+     * datos = {
+     *   fecha: "20/04/2026",
+     *   actividad: "Áreas Integradas...",
+     *   tarea: "MATEMÁTICA: Dos fichas...",
+     *   reto: "Evaluación de PICTOGRAMAS...",
+     *   registrosAlumnos: [
+     *     { alumno: "Naela Arias", avance: "Matemática A", observaciones: "..." },
+     *     ...
+     *   ]
+     * }
+     */
+    try {
+        const ss = SpreadsheetApp.openById(SHEET_ID);
+        const sheet = ss.getSheetByName(SHEET_NAME);
+        
+        // Headers (fila 1)
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const colMap = {};
+        headers.forEach((h, i) => {
+            colMap[h.toLowerCase().trim()] = i + 1; // +1 para getRange (1-indexed)
+        });
+        
+        // Validar que existan las columnas necesarias
+        const requiredCols = ["fecha", "alumno", "actividad del día (aula)", "avance del niño", "observaciones/notas", "reto de mañana", "tarea"];
+        for (const col of requiredCols) {
+            if (!Object.keys(colMap).some(k => k.includes(col.split(" ")[0]))) {
+                Logger.log(`Advertencia: Columna "${col}" no encontrada exactamente. Usando búsqueda parcial.`);
+            }
+        }
+        
+        // Buscar índices de columnas (búsqueda flexible)
+        const getColIndex = (keyword) => {
+            for (const [k, v] of Object.entries(colMap)) {
+                if (k.includes(keyword)) return v;
+            }
+            return null;
+        };
+        
+        const idx = {
+            fecha: getColIndex("fecha"),
+            alumno: getColIndex("alumno"),
+            actividad: getColIndex("actividad"),
+            avance: getColIndex("avance"),
+            observaciones: getColIndex("observaciones"),
+            reto: getColIndex("reto"),
+            tarea: getColIndex("tarea")
+        };
+        
+        // Validar que encontró todas las columnas
+        const missingCols = Object.entries(idx).filter(([k, v]) => v === null).map(([k]) => k);
+        if (missingCols.length > 0) {
+            return { error: `Columnas no encontradas: ${missingCols.join(", ")}` };
+        }
+        
+        // Siguiente fila disponible
+        const nextRow = sheet.getLastRow() + 1;
+        
+        // Preparar datos para insertarlos
+        const rowsToInsert = datos.registrosAlumnos.map((reg, index) => {
+            const row = new Array(sheet.getLastColumn()).fill("");
+            row[idx.fecha - 1] = datos.fecha;
+            row[idx.alumno - 1] = reg.alumno;
+            row[idx.actividad - 1] = datos.actividad;
+            row[idx.avance - 1] = reg.avance;
+            row[idx.observaciones - 1] = reg.observaciones;
+            row[idx.reto - 1] = datos.reto;
+            row[idx.tarea - 1] = datos.tarea;
+            return row;
+        });
+        
+        // Insertar todas las filas de una vez
+        if (rowsToInsert.length > 0) {
+            sheet.getRange(nextRow, 1, rowsToInsert.length, rowsToInsert[0].length).setValues(rowsToInsert);
+        }
+        
+        return {
+            success: true,
+            registrosGuardados: rowsToInsert.length,
+            mensaje: `✅ ${rowsToInsert.length} registros guardados exitosamente`
+        };
+    } catch (e) {
+        Logger.log("Error en guardarReporte:", e.toString());
+        return { error: e.toString() };
+    }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  4. getHTML — Retorna el HTML del formulario
+// ──────────────────────────────────────────────────────────────
+function getHTML() {
+    return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte Diario — Plataforma I.E.</title>
+    <title>Reporte Diario — Formulario</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* ══════════════════════════════════════
-           VARIABLES Y RESET
-        ══════════════════════════════════════ */
-        :root {
-            --verde:    #1a7f5a;
-            --verde-lt: #e6f5ef;
-            --verde-md: #c0e8d8;
-            --azul:     #1d4ed8;
-            --azul-lt:  #eff6ff;
-            --naranja:  #d97706;
-            --naranja-lt: #fef9c3;
-            --rojo:     #dc2626;
-            --rojo-lt:  #fee2e2;
-            --gris:     #64748b;
-            --gris-lt:  #f1f5f9;
-            --blanco:   #ffffff;
-            --texto:    #0f172a;
-            --borde:    #e2e8f0;
-            --sombra:   0 4px 24px rgba(0,0,0,0.07);
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: 'DM Sans', sans-serif;
-            background: #f0f7f4;
-            color: var(--texto);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #1a7f5a 0%, #0d5c41 100%);
             min-height: 100vh;
+            padding: 16px;
+            color: #0f172a;
         }
 
-        /* ══════════════════════════════════════
-           LOADING
-        ══════════════════════════════════════ */
-        #loadingScreen {
-            position: fixed; inset: 0;
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
             background: white;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 100;
-            transition: opacity 0.5s;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
         }
+
+        .header {
+            background: linear-gradient(135deg, #1a7f5a 0%, #0d5c41 100%);
+            color: white;
+            padding: 28px 24px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .header p {
+            font-size: 12px;
+            opacity: 0.85;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .content {
+            padding: 32px 24px;
+            min-height: 500px;
+            display: none;
+        }
+        .content.active { display: block; }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.15s;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #1a7f5a;
+            box-shadow: 0 0 0 3px rgba(26, 127, 90, 0.1);
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .alumno-card {
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: all 0.15s;
+        }
+        .alumno-card.active {
+            background: #e6f5ef;
+            border-color: #1a7f5a;
+        }
+        .alumno-card-header {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alumno-card-header .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: #1a7f5a;
+            color: white;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1a7f5a 0%, #0d5c41 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        button {
+            flex: 1;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1a7f5a 0%, #0d5c41 100%);
+            color: white;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(26, 127, 90, 0.3); }
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+        .btn-secondary:hover { background: #e2e8f0; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .alert {
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .alert-success {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .alert-info {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
         .spinner {
-            width: 44px; height: 44px;
-            border: 4px solid var(--verde-md);
-            border-top-color: var(--verde);
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #1a7f5a;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
-            margin-bottom: 16px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ══════════════════════════════════════
-           ERROR STATE
-        ══════════════════════════════════════ */
-        #errorScreen {
-            display: none;
-            max-width: 480px;
-            margin: 80px auto;
-            text-align: center;
-            padding: 24px;
-        }
-        #errorScreen .err-icon { font-size: 56px; margin-bottom: 16px; }
-        #errorScreen h2 { font-family: 'Fraunces', serif; font-size: 22px; color: var(--texto); margin-bottom: 8px; }
-        #errorScreen p  { color: var(--gris); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
-        .alumno-list {
-            text-align: left;
-            background: white;
-            border-radius: 16px;
-            border: 1px solid var(--borde);
-            padding: 12px 16px;
-            max-height: 320px;
-            overflow-y: auto;
-        }
-        .alumno-list-item {
-            display: block;
-            padding: 10px 12px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: var(--azul);
-            font-size: 13px;
-            font-weight: 600;
-            transition: background 0.15s;
-            cursor: pointer;
-        }
-        .alumno-list-item:hover { background: var(--azul-lt); }
-
-        /* ══════════════════════════════════════
-           CONTENEDOR PRINCIPAL
-        ══════════════════════════════════════ */
-        #reportContainer {
-            display: none;
-            max-width: 740px;
-            margin: 0 auto;
-            padding: 24px 16px 48px;
-        }
-
-        /* ══════════════════════════════════════
-           CABECERA INSTITUCIONAL
-        ══════════════════════════════════════ */
-        .inst-header {
-            background: var(--verde);
-            border-radius: 24px 24px 0 0;
-            padding: 22px 28px 20px;
+        .step-indicator {
             display: flex;
-            align-items: center;
-            gap: 16px;
-            position: relative;
-            overflow: hidden;
-        }
-        .inst-header::before {
-            content: '';
-            position: absolute;
-            top: -40px; right: -40px;
-            width: 160px; height: 160px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.07);
-        }
-        .inst-header::after {
-            content: '';
-            position: absolute;
-            bottom: -30px; right: 60px;
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.05);
-        }
-        .inst-logo {
-            width: 54px; height: 54px;
-            background: rgba(255,255,255,0.18);
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 26px;
-            flex-shrink: 0;
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-        .inst-info h1 {
-            font-family: 'Fraunces', serif;
-            font-size: 15px;
-            font-weight: 700;
-            color: white;
-            letter-spacing: 0.02em;
-        }
-        .inst-info p {
-            font-size: 11px;
-            color: rgba(255,255,255,0.75);
-            font-weight: 500;
-            margin-top: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .inst-badge {
-            margin-left: auto;
-            background: rgba(255,255,255,0.15);
-            border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 10px;
-            padding: 6px 12px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-        .inst-badge .badge-label {
-            font-size: 9px;
-            color: rgba(255,255,255,0.65);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 700;
-        }
-        .inst-badge .badge-value {
-            font-size: 13px;
-            color: white;
-            font-weight: 700;
-            margin-top: 1px;
-        }
-
-        /* ══════════════════════════════════════
-           TARJETA DEL ALUMNO
-        ══════════════════════════════════════ */
-        .alumno-card {
-            background: white;
-            padding: 24px 28px 20px;
-            border-left: 1px solid var(--borde);
-            border-right: 1px solid var(--borde);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        .alumno-avatar {
-            width: 52px; height: 52px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--verde) 0%, #0d5c41 100%);
-            display: flex; align-items: center; justify-content: center;
-            font-family: 'Fraunces', serif;
-            font-size: 20px;
-            font-weight: 700;
-            color: white;
-            flex-shrink: 0;
-        }
-        .alumno-info h2 {
-            font-family: 'Fraunces', serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--texto);
-            line-height: 1.1;
-        }
-        .alumno-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 5px;
-        }
-        .meta-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: var(--gris-lt);
-            border: 1px solid var(--borde);
-            border-radius: 100px;
-            padding: 3px 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--gris);
-        }
-        .nivel-chip {
-            border-radius: 100px;
-            padding: 3px 10px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-        .nivel-AD { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
-        .nivel-A  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .nivel-B  { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
-        .nivel-C  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-
-        /* ══════════════════════════════════════
-           SELECTOR DE FECHA
-        ══════════════════════════════════════ */
-        .fecha-selector-bar {
-            background: white;
-            border-left: 1px solid var(--borde);
-            border-right: 1px solid var(--borde);
-            border-bottom: 1px solid var(--borde);
-            padding: 12px 28px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .fecha-selector-bar label {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--gris);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            white-space: nowrap;
-        }
-        #fechaSelect {
-            flex: 1;
-            min-width: 180px;
-            background: var(--gris-lt);
-            border: 1px solid var(--borde);
-            border-radius: 10px;
-            padding: 7px 12px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--texto);
-            cursor: pointer;
-            outline: none;
-        }
-        #fechaSelect:focus { border-color: var(--verde); box-shadow: 0 0 0 3px var(--verde-lt); }
-        .total-registros {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--gris);
-            white-space: nowrap;
-        }
-
-        /* ══════════════════════════════════════
-           CUERPO DEL REPORTE
-        ══════════════════════════════════════ */
-        .reporte-body {
-            background: white;
-            border: 1px solid var(--borde);
-            border-top: none;
-            border-radius: 0 0 24px 24px;
-            overflow: hidden;
-            box-shadow: var(--sombra);
-        }
-
-        /* ══════════════════════════════════════
-           SECCIONES
-        ══════════════════════════════════════ */
-        .seccion {
-            padding: 20px 28px;
-            border-bottom: 1px solid var(--borde);
-            animation: fadeIn 0.3s ease both;
-        }
-        .seccion:last-child { border-bottom: none; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .sec-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-        .sec-icon {
-            width: 34px; height: 34px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-        .sec-icon.verde   { background: var(--verde-lt); }
-        .sec-icon.azul    { background: var(--azul-lt); }
-        .sec-icon.naranja { background: var(--naranja-lt); }
-        .sec-icon.rojo    { background: var(--rojo-lt); }
-        .sec-icon.gris    { background: var(--gris-lt); }
-
-        .sec-title {
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--gris);
-        }
-
-        .sec-content {
-            font-size: 14px;
-            line-height: 1.7;
-            color: var(--texto);
-            font-weight: 400;
-        }
-        .sec-content.empty {
-            color: var(--gris);
-            font-style: italic;
-            font-size: 13px;
-        }
-
-        /* ══════════════════════════════════════
-           AVANCE — DESTACADO
-        ══════════════════════════════════════ */
-        .avance-box {
-            background: var(--verde-lt);
-            border: 1.5px solid var(--verde-md);
-            border-radius: 14px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .avance-nivel-big {
-            font-family: 'Fraunces', serif;
-            font-size: 36px;
-            font-weight: 700;
-            line-height: 1;
-            flex-shrink: 0;
-            width: 52px;
-            text-align: center;
-        }
-        .avance-nivel-big.AD { color: #1e40af; }
-        .avance-nivel-big.A  { color: var(--verde); }
-        .avance-nivel-big.B  { color: var(--naranja); }
-        .avance-nivel-big.C  { color: var(--rojo); }
-        .avance-desc { flex: 1; }
-        .avance-desc .nivel-label {
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-bottom: 3px;
-        }
-        .avance-desc .nivel-label.AD { color: #1e40af; }
-        .avance-desc .nivel-label.A  { color: var(--verde); }
-        .avance-desc .nivel-label.B  { color: var(--naranja); }
-        .avance-desc .nivel-label.C  { color: var(--rojo); }
-        .avance-desc .nivel-text {
-            font-size: 13px;
-            color: var(--gris);
-            font-weight: 500;
-        }
-
-        /* ══════════════════════════════════════
-           TAREAS — PILLS
-        ══════════════════════════════════════ */
-        .tarea-pill {
-            display: inline-flex;
-            align-items: flex-start;
-            gap: 8px;
-            background: var(--naranja-lt);
-            border: 1px solid #fde68a;
-            border-radius: 12px;
-            padding: 10px 14px;
-            margin-bottom: 6px;
-            width: 100%;
-            font-size: 13px;
-            line-height: 1.5;
-            color: var(--texto);
-        }
-        .tarea-pill .tarea-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--naranja);
-            flex-shrink: 0;
-            margin-top: 5px;
-        }
-
-        /* ══════════════════════════════════════
-           RETO — DESTACADO
-        ══════════════════════════════════════ */
-        .reto-box {
-            background: #f0f4ff;
-            border: 1.5px solid #c7d7ff;
-            border-radius: 14px;
-            padding: 14px 18px;
-        }
-        .reto-items { margin-top: 2px; }
-        .reto-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            padding: 4px 0;
-            font-size: 13px;
-            color: var(--texto);
-            line-height: 1.5;
-        }
-        .reto-item::before {
-            content: '→';
-            color: var(--azul);
-            font-weight: 700;
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-
-        /* ══════════════════════════════════════
-           OBSERVACIONES
-        ══════════════════════════════════════ */
-        .obs-box {
-            background: #fffbf0;
-            border-left: 4px solid var(--naranja);
-            border-radius: 0 12px 12px 0;
-            padding: 12px 16px;
-            font-size: 13px;
-            line-height: 1.7;
-            color: var(--texto);
-        }
-
-        /* ══════════════════════════════════════
-           MÚLTIPLES FECHAS — HISTORIAL
-        ══════════════════════════════════════ */
-        .historial-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 6px;
-            margin-top: 8px;
-        }
-        .hist-item {
-            background: var(--gris-lt);
-            border: 1px solid var(--borde);
-            border-radius: 10px;
-            padding: 8px 10px;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-align: center;
-        }
-        .hist-item:hover { background: var(--verde-lt); border-color: var(--verde-md); }
-        .hist-item.active { background: var(--verde); border-color: var(--verde); color: white; }
-        .hist-item .hist-fecha { font-size: 12px; font-weight: 700; }
-        .hist-item .hist-nivel { font-size: 10px; font-weight: 600; opacity: 0.7; margin-top: 1px; }
-
-        /* ══════════════════════════════════════
-           FOOTER
-        ══════════════════════════════════════ */
-        .reporte-footer {
-            text-align: center;
-            padding: 20px;
-            color: var(--gris);
-            font-size: 11px;
-        }
-        .reporte-footer strong { color: var(--verde); }
-
-        /* ══════════════════════════════════════
-           BOTÓN IMPRIMIR
-        ══════════════════════════════════════ */
-        .print-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--verde);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 9px 18px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.15s;
-            margin-left: auto;
-        }
-        .print-btn:hover { background: #155e45; transform: translateY(-1px); }
-
-        .top-bar {
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
+            margin-bottom: 20px;
             gap: 8px;
         }
-        .top-bar-brand {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .step {
+            flex: 1;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
         }
-        .top-bar-brand .brand-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--verde);
-        }
-        .top-bar-brand span {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--verde);
-            letter-spacing: 0.04em;
-        }
+        .step.active { background: #1a7f5a; }
 
-        /* ══════════════════════════════════════
-           IMPRESIÓN A4
-        ══════════════════════════════════════ */
-        @media print {
-            @page { size: A4 portrait; margin: 12mm 14mm; }
-            body { background: white; }
-            .top-bar, .print-btn, .fecha-selector-bar, #errorScreen { display: none !important; }
-            #reportContainer { display: block !important; padding: 0; max-width: 100%; }
-            .reporte-body { box-shadow: none; border-radius: 0 0 8px 8px; }
-            .inst-header { border-radius: 8px 8px 0 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .seccion { page-break-inside: avoid; }
-            .avance-box, .reto-box, .obs-box, .tarea-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
-
-        /* ══════════════════════════════════════
-           RESPONSIVE
-        ══════════════════════════════════════ */
-        @media (max-width: 600px) {
-            .inst-header { padding: 16px 18px; }
-            .inst-badge { display: none; }
-            .alumno-card { padding: 18px; }
-            .alumno-info h2 { font-size: 18px; }
-            .seccion { padding: 16px 18px; }
-            .avance-nivel-big { font-size: 28px; width: 42px; }
+        @media (max-width: 500px) {
+            .container { border-radius: 16px; }
+            .header { padding: 20px 16px; }
+            .header h1 { font-size: 20px; }
+            .content { padding: 20px 16px; }
         }
     </style>
 </head>
 <body>
 
-<!-- ── LOADING ── -->
-<div id="loadingScreen">
-    <div class="spinner"></div>
-    <p style="font-size:13px;color:#64748b;font-weight:600;">Cargando reporte...</p>
-</div>
-
-<!-- ── ERROR / SELECTOR ── -->
-<div id="errorScreen">
-    <div class="err-icon">📋</div>
-    <h2>Selecciona un alumno</h2>
-    <p>Elige un alumno para ver su reporte diario, o accede directamente con el enlace personalizado.</p>
-    <div class="alumno-list" id="alumnoListEl"></div>
-</div>
-
-<!-- ── REPORTE ── -->
-<div id="reportContainer">
-    <div class="top-bar no-print">
-        <div class="top-bar-brand">
-            <div class="brand-dot"></div>
-            <span>Plataforma I.E. — Reporte Diario</span>
-        </div>
-        <button class="print-btn" onclick="window.print()">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-            </svg>
-            Imprimir A4
-        </button>
+<div class="container">
+    <div class="header">
+        <h1>📋 Reporte Diario</h1>
+        <p>Plataforma I.E. — Monitoreo 2024</p>
     </div>
 
-    <!-- Cabecera institucional -->
-    <div class="inst-header">
-        <div class="inst-logo">🏫</div>
-        <div class="inst-info">
-            <h1>I.E. N° 3055 — Tupac Amaru</h1>
-            <p>Comas · Monitoreo 2024</p>
+    <!-- PASO 1: Datos comunes -->
+    <div class="content active" id="step1">
+        <div class="step-indicator">
+            <div class="step active"></div>
+            <div class="step"></div>
         </div>
-        <div class="inst-badge">
-            <div class="badge-label">Diario del Aula</div>
-            <div class="badge-value" id="badgeFecha">—</div>
+
+        <div class="section-title">Paso 1 de 2 — Información General</div>
+
+        <div class="form-group">
+            <label>📅 Fecha</label>
+            <input type="date" id="fecha" required>
+        </div>
+
+        <div class="form-group">
+            <label>📖 Actividad del Día (Aula)</label>
+            <textarea id="actividad" placeholder="Ej: Áreas Integradas: Inicio de unidad Matemática: Número de tres cifras Dictado" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>✏️ Tarea</label>
+            <textarea id="tarea" placeholder="Ej: MATEMÁTICA: Dos fichas de la clase del día de hoy" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>🚀 Reto de Mañana</label>
+            <textarea id="reto" placeholder="Ej: Evaluación de PICTOGRAMAS Práctica de LOS SENTIDOS" required></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="irAlPaso2()">Siguiente →</button>
         </div>
     </div>
 
-    <!-- Tarjeta alumno -->
-    <div class="alumno-card">
-        <div class="alumno-avatar" id="alumnoAvatar">?</div>
-        <div class="alumno-info">
-            <h2 id="alumnoNombre">—</h2>
-            <div class="alumno-meta" id="alumnoMeta"></div>
+    <!-- PASO 2: Alumnos -->
+    <div class="content" id="step2">
+        <div class="step-indicator">
+            <div class="step active"></div>
+            <div class="step active"></div>
         </div>
-    </div>
 
-    <!-- Selector de fecha -->
-    <div class="fecha-selector-bar no-print">
-        <label>📅 Registro:</label>
-        <select id="fechaSelect" onchange="mostrarRegistro()">
-            <option value="">— Selecciona una fecha —</option>
-        </select>
-        <span class="total-registros" id="totalRegistros"></span>
-    </div>
+        <div class="section-title">Paso 2 de 2 — Avance por Alumno</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:16px;">Completa el avance para cada estudiante (observaciones es opcional)</p>
 
-    <!-- Cuerpo dinámico del reporte -->
-    <div class="reporte-body">
-        <div id="reporteContenido">
-            <div class="seccion" style="text-align:center;color:#94a3b8;padding:40px;">
-                <p style="font-size:14px;">Selecciona una fecha para ver el reporte</p>
-            </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
         </div>
-    </div>
 
-    <div class="reporte-footer">
-        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
+        <div id="alumnosContainer"></div>
+
+        <div id="alertContainer"></div>
+
+        <div class="button-group">
+            <button class="btn-secondary" onclick="irAlPaso1()">← Atrás</button>
+            <button class="btn-primary" id="btnGuardar" onclick="guardar()">Guardar Reporte</button>
+        </div>
     </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════
-//  CONFIGURACIÓN
-// ══════════════════════════════════════════════
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ72c-5lHs3CMtUmD8iw0U3nSwNKbTzN_SBlGxIkV_8YSOd1vNSXvM1Uf15xLP1aMrhMZYHVvynP-LV/pub?gid=936061106&single=true&output=csv";
+let alumnos = [];
+let formData = {};
 
-const NIVEL_META = {
-    "AD": { label: "Sobresaliente", texto: "Supera los aprendizajes esperados del ciclo." },
-    "A":  { label: "Logrado",       texto: "Cumple con los aprendizajes esperados del ciclo." },
-    "B":  { label: "En Proceso",    texto: "Está avanzando hacia los aprendizajes esperados." },
-    "C":  { label: "En Inicio",     texto: "Requiere apoyo para alcanzar los aprendizajes esperados." }
-};
-
-// ══════════════════════════════════════════════
-//  ESTADO
-// ══════════════════════════════════════════════
-let allData   = [];   // todos los registros del CSV
-let alumnoData = [];  // registros del alumno actual
-let alumnoActual = "";
-
-// ══════════════════════════════════════════════
-//  PARSEO CSV (robusto — maneja comas dentro de comillas)
-// ══════════════════════════════════════════════
-function parseCSV(text) {
-    /*
-     * Parser CSV correcto para Google Sheets:
-     * Procesa CARÁCTER POR CARÁCTER sobre el texto completo.
-     * Las celdas con saltos de línea dentro de comillas se respetan
-     * antes de dividir en filas — esto soluciona el bug de columnas truncadas.
-     *
-     * Reglas RFC 4180:
-     * - Las celdas pueden estar entre comillas dobles
-     * - Dentro de comillas, un salto de línea es parte del valor
-     * - Dos comillas seguidas dentro de comillas = una comilla literal
-     * - Las comas fuera de comillas son separadores de columna
-     * - Los \n fuera de comillas son separadores de fila
-     */
-    const rows   = [];
-    let row      = [];
-    let cell     = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < text.length; i++) {
-        const ch   = text[i];
-        const next = text[i + 1];
-
-        if (inQuotes) {
-            if (ch === '"' && next === '"') {
-                // Comilla doble escapada → comilla literal
-                cell += '"';
-                i++;
-            } else if (ch === '"') {
-                // Cierre de comillas
-                inQuotes = false;
-            } else {
-                // Cualquier carácter dentro de comillas (incluyendo \n) → parte del valor
-                cell += ch;
-            }
-        } else {
-            if (ch === '"') {
-                inQuotes = true;
-            } else if (ch === ',') {
-                row.push(cell.trim());
-                cell = '';
-            } else if (ch === '\n' || (ch === '\r' && next === '\n')) {
-                if (ch === '\r') i++; // saltar \r de \r\n
-                row.push(cell.trim());
-                cell = '';
-                if (row.some(c => c !== '')) rows.push(row);
-                row = [];
-            } else if (ch === '\r') {
-                // \r solitario — ignorar
-            } else {
-                cell += ch;
-            }
-        }
+// ── Inicializar ──
+google.script.run.withSuccessHandler(function(result) {
+    if (result.success) {
+        alumnos = result.alumnos;
+        console.log("Alumnos cargados:", alumnos.length);
+        renderizarAlumnos();
+    } else {
+        mostrarAlerta("error", result.error || "Error al cargar alumnos");
     }
-    // Última fila si no termina en \n
-    row.push(cell.trim());
-    if (row.some(c => c !== '')) rows.push(row);
+}).getAlumnos();
 
-    return rows;
+// ── Fijar fecha de hoy por defecto (ajustada a zona horaria de Perú UTC-5) ──
+document.addEventListener('DOMContentLoaded', function() {
+    const ahora = new Date();
+    // Ajustar a UTC-5 (zona horaria de Perú — Lima)
+    const hoy = new Date(ahora.getTime() - (5 * 60 * 60 * 1000));
+    const fechaFormato = hoy.toISOString().split('T')[0];
+    document.getElementById('fecha').value = fechaFormato;
+});
+
+// ── Renderizar cards de alumnos ──
+function renderizarAlumnos() {
+    const container = document.getElementById('alumnosContainer');
+    container.innerHTML = alumnos.map((alu, i) => \`
+        <div class="alumno-card" id="card-\${i}">
+            <div class="alumno-card-header">
+                <span class="num">\${i + 1}</span>
+                <span>\${alu}</span>
+            </div>
+            <div class="form-group">
+                <label>Avance del niño</label>
+                <input type="text" placeholder="Ej: Matemática A" 
+                       data-alumno="\${alu}" data-field="avance"
+                       onchange="actualizarDatos(this)">
+            </div>
+            <div class="form-group">
+                <label>Observaciones/Notas</label>
+                <textarea placeholder="Opcional" data-alumno="\${alu}" data-field="observaciones"
+                          onchange="actualizarDatos(this)"></textarea>
+            </div>
+        </div>
+    \`).join('');
 }
 
-function normalizarNivel(str) {
-    if (!str) return '';
-    // Extraer solo la nota de strings como "Matemática A", "Matemática B", etc.
-    const m = str.match(/\b(AD|A|B|C)\b/);
-    return m ? m[1] : str.trim();
-}
-
-function extraerMateria(str) {
-    if (!str) return '';
-    // Extraer la materia de "Matemática A" → "Matemática"
-    return str.replace(/\s*(AD|A|B|C)\s*$/, '').trim();
-}
-
-function formatearFecha(str) {
-    if (!str) return '';
-    // Intentar parsear fecha DD/MM/YYYY o YYYY-MM-DD o DD-MM-YYYY
-    const partes = str.split(/[\/\-]/);
-    if (partes.length === 3) {
-        const [a, b, c] = partes;
-        let dia, mes, anio;
-        if (a.length === 4) { anio = a; mes = b; dia = c; }
-        else { dia = a; mes = b; anio = c; }
-        const fecha = new Date(anio, mes - 1, dia);
-        if (!isNaN(fecha)) {
-            return fecha.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        }
+// ── Actualizar datos al cambiar ──
+function actualizarDatos(input) {
+    const alumno = input.getAttribute('data-alumno');
+    const field = input.getAttribute('data-field');
+    if (!formData[alumno]) formData[alumno] = {};
+    formData[alumno][field] = input.value;
+    
+    // Actualizar visual de la card
+    const card = input.closest('.alumno-card');
+    const tieneAvance = card.querySelector('input[data-field="avance"]').value.trim();
+    if (tieneAvance) {
+        card.classList.add('active');
     }
-    return str;
+    
+    actualizarProgreso();
 }
 
-// ══════════════════════════════════════════════
-//  INICIALIZACIÓN
-// ══════════════════════════════════════════════
-async function init() {
-    // 1. Leer ?alumno= de la URL
-    const params = new URLSearchParams(window.location.search);
-    alumnoActual = (params.get('alumno') || '').trim();
-
-    try {
-        const res  = await fetch(CSV_URL);
-        const text = await res.text();
-        const rows = parseCSV(text);
-        if (rows.length < 2) throw new Error("Sin datos");
-
-        const headers = rows[0].map(h => h.toLowerCase().trim());
-        console.log("Headers detectados:", headers);
-
-        // Búsqueda exacta primero, luego parcial — evita falsos positivos
-        const gi = (kwExact, kwPartial) => {
-            let i = headers.findIndex(h => h === kwExact);
-            if (i === -1) i = headers.findIndex(h => h.includes(kwPartial || kwExact));
-            return i;
-        };
-
-        const idx = {
-            fecha:  gi("fecha",       "fecha"),
-            alumno: gi("alumno",      "alumno"),
-            activ:  gi("actividad del día (aula)", "actividad"),
-            avance: gi("avance del niño",           "avance"),
-            obs:    gi("observaciones/notas",        "observ"),
-            reto:   gi("reto de mañana",             "reto"),
-            tarea:  gi("tarea",       "tarea")
-        };
-        console.log("Índices de columnas:", idx);
-
-        // Nombres de alumnos válidos: columna B del CSV (índice 1 fijo como fallback)
-        // Un alumno válido tiene: solo letras, espacios y tildes — sin comas, sin números largos
-        const esNombreValido = str => {
-            if (!str || str.length < 3 || str.length > 60) return false;
-            // Rechazar si contiene dígitos o caracteres típicos de observaciones
-            if (/[0-9]/.test(str)) return false;
-            // Rechazar si tiene más de 4 palabras (probablemente texto de observación)
-            if (str.trim().split(/\s+/).length > 5) return false;
-            return true;
-        };
-
-        // Convertir filas a objetos — filtrar solo filas con nombre de alumno válido
-        allData = rows.slice(1).filter(r => {
-            const posibleAlumno = idx.alumno >= 0 ? r[idx.alumno] : r[1];
-            return r.length > 2 && posibleAlumno && esNombreValido(posibleAlumno);
-        }).map(r => ({
-            fecha:  (idx.fecha  >= 0 ? r[idx.fecha]  : r[0]) || '',
-            alumno: (idx.alumno >= 0 ? r[idx.alumno] : r[1]) || '',
-            activ:  (idx.activ  >= 0 ? r[idx.activ]  : r[2]) || '',
-            avance: (idx.avance >= 0 ? r[idx.avance] : r[3]) || '',
-            obs:    (idx.obs    >= 0 ? r[idx.obs]    : r[4]) || '',
-            reto:   (idx.reto   >= 0 ? r[idx.reto]   : r[5]) || '',
-            tarea:  (idx.tarea  >= 0 ? r[idx.tarea]  : r[6]) || ''
-        }));
-
-        console.log("Total registros procesados:", allData.length);
-        if (allData.length > 0) console.log("Primer registro:", allData[0]);
-
-        ocultarLoading();
-
-        if (!alumnoActual) {
-            mostrarSelectorAlumnos();
-        } else {
-            alumnoData = allData.filter(r =>
-                r.alumno.trim().toLowerCase() === alumnoActual.toLowerCase()
-            );
-            if (alumnoData.length === 0) {
-                mostrarSelectorAlumnos(`No se encontraron registros para "${alumnoActual}".`);
-            } else {
-                mostrarReporte();
-            }
-        }
-    } catch (e) {
-        ocultarLoading();
-        mostrarSelectorAlumnos("No se pudo cargar la data. Verifica que la hoja esté publicada.");
-    }
+// ── Actualizar barra de progreso ──
+function actualizarProgreso() {
+    const completados = Object.keys(formData).filter(alu => 
+        formData[alu].avance && formData[alu].avance.trim()
+    ).length;
+    const porcentaje = (completados / alumnos.length) * 100;
+    document.getElementById('progressFill').style.width = porcentaje + '%';
 }
 
-function ocultarLoading() {
-    const el = document.getElementById('loadingScreen');
-    el.style.opacity = '0';
-    setTimeout(() => el.style.display = 'none', 500);
-}
-
-// ══════════════════════════════════════════════
-//  SELECTOR DE ALUMNOS (cuando no hay ?alumno=)
-// ══════════════════════════════════════════════
-function mostrarSelectorAlumnos(msg = '') {
-    document.getElementById('errorScreen').style.display = 'block';
-    if (msg) {
-        document.querySelector('#errorScreen p').textContent = msg;
-    }
-    const alumnos = [...new Set(allData.map(r => r.alumno.trim()))].sort();
-    const list = document.getElementById('alumnoListEl');
-    list.innerHTML = alumnos.map(a => `
-        <a class="alumno-list-item" onclick="irAlumno('${a.replace(/'/g,"\\'")}')">
-            👤 ${a}
-        </a>`).join('');
-}
-
-function irAlumno(nombre) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('alumno', nombre);
-    window.location.href = url.toString();
-}
-
-// ══════════════════════════════════════════════
-//  MOSTRAR REPORTE
-// ══════════════════════════════════════════════
-function mostrarReporte() {
-    document.getElementById('reportContainer').style.display = 'block';
-
-    // Iniciales para el avatar
-    const iniciales = alumnoActual.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
-    document.getElementById('alumnoAvatar').textContent = iniciales;
-    document.getElementById('alumnoNombre').textContent = alumnoActual;
-
-    // Llenar el select de fechas (ordenadas desc — más reciente primero)
-    const fechas = [...new Set(alumnoData.map(r => r.fecha))].sort().reverse();
-    const sel = document.getElementById('fechaSelect');
-    sel.innerHTML = '<option value="">— Selecciona una fecha —</option>';
-    fechas.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = formatearFecha(f);
-        sel.appendChild(opt);
-    });
-
-    document.getElementById('totalRegistros').textContent =
-        `${alumnoData.length} registro${alumnoData.length !== 1 ? 's' : ''} encontrado${alumnoData.length !== 1 ? 's' : ''}`;
-
-    // Seleccionar automáticamente la fecha más reciente
-    if (fechas.length > 0) {
-        sel.value = fechas[0];
-        mostrarRegistro();
-    }
-}
-
-// ══════════════════════════════════════════════
-//  MOSTRAR REGISTRO DE UNA FECHA
-// ══════════════════════════════════════════════
-function mostrarRegistro() {
-    const fechaSel = document.getElementById('fechaSelect').value;
-    if (!fechaSel) {
-        document.getElementById('reporteContenido').innerHTML = `
-            <div class="seccion" style="text-align:center;color:#94a3b8;padding:40px;">
-                <p style="font-size:14px;">Selecciona una fecha para ver el reporte</p>
-            </div>`;
-        document.getElementById('badgeFecha').textContent = '—';
-        document.getElementById('alumnoMeta').innerHTML = '';
+// ── Ir a Paso 2 ──
+function irAlPaso2() {
+    const fecha = document.getElementById('fecha').value;
+    const actividad = document.getElementById('actividad').value;
+    const tarea = document.getElementById('tarea').value;
+    const reto = document.getElementById('reto').value;
+    
+    if (!fecha || !actividad || !tarea || !reto) {
+        mostrarAlerta('error', 'Completa todos los campos de la información general');
         return;
     }
-
-    const reg = alumnoData.find(r => r.fecha === fechaSel);
-    if (!reg) return;
-
-    // Actualizar badge de fecha en header
-    const partesFecha = fechaSel.split(/[\/\-]/);
-    let diaCorto = fechaSel;
-    if (partesFecha.length === 3) {
-        const [a, b, c] = partesFecha;
-        diaCorto = a.length === 4 ? `${c}/${b}/${a}` : `${a}/${b}/${c}`;
-    }
-    document.getElementById('badgeFecha').textContent = diaCorto;
-
-    // Meta chips del alumno
-    const nivel = normalizarNivel(reg.avance);
-    const materia = extraerMateria(reg.avance);
-    const nivelMeta = NIVEL_META[nivel] || null;
-    document.getElementById('alumnoMeta').innerHTML = `
-        <span class="meta-chip">📅 ${formatearFecha(fechaSel)}</span>
-        ${materia ? `<span class="meta-chip">📚 ${materia}</span>` : ''}
-        ${nivel && nivelMeta ? `<span class="nivel-chip nivel-${nivel}">${nivel} · ${nivelMeta.label}</span>` : ''}
-    `;
-
-    // Construir secciones
-    let html = '';
-
-    // ── 1. Actividades del día ──
-    const actividades = reg.activ.split('\n').filter(a => a.trim());
-    html += `
-        <div class="seccion" style="animation-delay:0.05s">
-            <div class="sec-header">
-                <div class="sec-icon verde">📖</div>
-                <span class="sec-title">Lo que hicimos hoy</span>
-            </div>
-            <div class="sec-content">
-                ${actividades.length > 1
-                    ? `<ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:4px;">
-                        ${actividades.map(a => `<li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--verde);font-weight:700;flex-shrink:0;">•</span><span>${a}</span></li>`).join('')}
-                       </ul>`
-                    : `<p>${reg.activ || '<span class="empty">Sin registro</span>'}</p>`
-                }
-            </div>
-        </div>`;
-
-    // ── 2. Avance del alumno ──
-    html += `
-        <div class="seccion" style="animation-delay:0.1s">
-            <div class="sec-header">
-                <div class="sec-icon verde">🎯</div>
-                <span class="sec-title">El avance de su hijo/a</span>
-            </div>
-            ${nivel && nivelMeta
-                ? `<div class="avance-box">
-                    <div class="avance-nivel-big ${nivel}">${nivel}</div>
-                    <div class="avance-desc">
-                        <div class="nivel-label ${nivel}">${nivelMeta.label}</div>
-                        <div class="nivel-text">${materia ? `En ${materia}: ` : ''}${nivelMeta.texto}</div>
-                    </div>
-                   </div>`
-                : `<div class="sec-content">${reg.avance || '<span class="empty">Sin registro de avance</span>'}</div>`
-            }
-        </div>`;
-
-    // ── 3. Observaciones ──
-    if (reg.obs && reg.obs.trim()) {
-        html += `
-            <div class="seccion" style="animation-delay:0.15s">
-                <div class="sec-header">
-                    <div class="sec-icon naranja">📝</div>
-                    <span class="sec-title">Observaciones del docente</span>
-                </div>
-                <div class="obs-box">${convertirURLsEnEnlaces(reg.obs).replace(/\n/g, '<br>')}</div>
-            </div>`;
-    }
-
-    // ── 4. Tarea ──
-    if (reg.tarea && reg.tarea.trim()) {
-        const tareas = reg.tarea.split('\n').filter(t => t.trim());
-        html += `
-            <div class="seccion" style="animation-delay:0.2s">
-                <div class="sec-header">
-                    <div class="sec-icon naranja">✏️</div>
-                    <span class="sec-title">Tarea para casa</span>
-                </div>
-                ${tareas.map(t => `<div class="tarea-pill"><div class="tarea-dot"></div>${t}</div>`).join('')}
-            </div>`;
-    }
-
-    // ── 5. Reto de mañana ──
-    if (reg.reto && reg.reto.trim()) {
-        const retos = reg.reto.split('\n').filter(r => r.trim());
-        html += `
-            <div class="seccion" style="animation-delay:0.25s">
-                <div class="sec-header">
-                    <div class="sec-icon azul">🚀</div>
-                    <span class="sec-title">Reto de mañana</span>
-                </div>
-                <div class="reto-box">
-                    <div class="reto-items">
-                        ${retos.map(r => `<div class="reto-item">${r}</div>`).join('')}
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    // ── 6. Historial mini (otras fechas disponibles) ──
-    const otrasFechas = alumnoData
-        .map(r => ({ fecha: r.fecha, nivel: normalizarNivel(r.avance) }))
-        .filter(r => r.fecha !== fechaSel)
-        .sort((a,b) => b.fecha.localeCompare(a.fecha))
-        .slice(0, 8);
-
-    if (otrasFechas.length > 0) {
-        html += `
-            <div class="seccion" style="animation-delay:0.3s;background:var(--gris-lt)">
-                <div class="sec-header">
-                    <div class="sec-icon gris">📅</div>
-                    <span class="sec-title">Otros registros disponibles</span>
-                </div>
-                <div class="historial-grid">
-                    ${otrasFechas.map(r => `
-                        <div class="hist-item" onclick="cambiarFecha('${r.fecha}')">
-                            <div class="hist-fecha">${r.fecha}</div>
-                            ${r.nivel ? `<div class="hist-nivel nivel-${r.nivel}">${r.nivel} — ${(NIVEL_META[r.nivel]||{}).label||''}</div>` : ''}
-                        </div>`).join('')}
-                </div>
-            </div>`;
-    }
-
-    document.getElementById('reporteContenido').innerHTML = html;
+    
+    formData.fecha = fecha;
+    formData.actividad = actividad;
+    formData.tarea = tarea;
+    formData.reto = reto;
+    
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
 }
 
-function cambiarFecha(fecha) {
-    document.getElementById('fechaSelect').value = fecha;
-    mostrarRegistro();
-    document.getElementById('reportContainer').scrollIntoView({ behavior: 'smooth' });
+// ── Volver a Paso 1 ──
+function irAlPaso1() {
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
 }
 
-// ══════════════════════════════════════════════
-//  ARRANCAR
-// ══════════════════════════════════════════════
-window.onload = init;
+// ── Guardar ──
+function guardar() {
+    const btn = document.getElementById('btnGuardar');
+    
+    // Validar que todos los alumnos tengan avance
+    const sinAvance = alumnos.filter(alu => !formData[alu] || !formData[alu].avance);
+    if (sinAvance.length > 0) {
+        mostrarAlerta('error', \`Completa el avance para: \${sinAvance.slice(0, 3).join(', ')}\${sinAvance.length > 3 ? '...' : ''}\`);
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Guardando...';
+    
+    const datosParaGuardar = {
+        fecha: formData.fecha,
+        actividad: formData.actividad,
+        tarea: formData.tarea,
+        reto: formData.reto,
+        registrosAlumnos: alumnos.map(alu => ({
+            alumno: alu,
+            avance: formData[alu]?.avance || '',
+            observaciones: formData[alu]?.observaciones || ''
+        }))
+    };
+    
+    google.script.run.withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Reporte';
+        
+        if (result.success) {
+            mostrarAlerta('success', result.mensaje);
+            setTimeout(() => {
+                // Limpiar y volver al inicio
+                formData = {};
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step1').classList.add('active');
+                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+                document.getElementById('actividad').value = '';
+                document.getElementById('tarea').value = '';
+                document.getElementById('reto').value = '';
+                actualizarProgreso();
+                renderizarAlumnos();
+            }, 2000);
+        } else {
+            mostrarAlerta('error', result.error || 'Error desconocido');
+        }
+    }).guardarReporte(datosParaGuardar);
+}
+
+// ── Mostrar alertas ──
+function mostrarAlerta(tipo, mensaje) {
+    const container = document.getElementById('alertContainer');
+    const alert = document.createElement('div');
+    alert.className = \`alert alert-\${tipo}\`;
+    alert.textContent = mensaje;
+    container.innerHTML = '';
+    container.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+}
 </script>
+
 </body>
 </html>
+    `;
+}
+`;
