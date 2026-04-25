@@ -599,7 +599,7 @@
         <div class="inst-logo">🏫</div>
         <div class="inst-info">
             <h1>I.E. N° 3055 — Tupac Amaru</h1>
-            <p>Comas · Monitoreo 3er Grado</p>
+            <p>Comas · Monitoreo 2024</p>
         </div>
         <div class="inst-badge">
             <div class="badge-label">Diario del Aula</div>
@@ -635,7 +635,7 @@
     </div>
 
     <div class="reporte-footer">
-        Generado por <strong>Plataforma de Monitoreo</strong> · Datos sincronizados desde Google Sheets
+        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
     </div>
 </div>
 
@@ -981,7 +981,7 @@ function mostrarRegistro() {
                     <div class="sec-icon naranja">📝</div>
                     <span class="sec-title">Observaciones del docente</span>
                 </div>
-                <div class="obs-box">${reg.obs.replace(/\n/g, '<br>')}</div>
+                <div class="obs-box">${linkificar(reg.obs).replace(/\n/g, '<br>')}</div>
             </div>`;
     }
 
@@ -1051,6 +1051,19 @@ function cambiarFecha(fecha) {
 // ══════════════════════════════════════════════
 //  ARRANCAR
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  CONVERTIR URLs EN ENLACES CLICKEABLES
+// ══════════════════════════════════════════════
+function linkificar(texto) {
+    if (!texto) return texto;
+    // Detecta URLs que comienzan con http://, https:// o www.
+    return texto.replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/g, function(url) {
+        const href = url.startsWith('http') ? url : 'https://' + url;
+        const display = url.length > 45 ? url.substring(0, 42) + '...' : url;
+        return '<a href="' + href + '" target="_blank" rel="noopener" style="color:#1a7f5a;font-weight:600;text-decoration:underline;word-break:break-all;">' + display + '</a>';
+    });
+}
+
 window.onload = init;
 </script>
 </body>
