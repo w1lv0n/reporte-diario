@@ -190,6 +190,21 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            transition: all 0.3s ease;
+        }
+        /* Alertas visuales según nivel */
+        .alumno-card-alerta-C {
+            border-left: 6px solid #dc2626 !important;
+            background: linear-gradient(90deg, #fef2f2 0%, white 100%) !important;
+            animation: pulsoSutil 2s ease-in-out infinite;
+        }
+        .alumno-card-alerta-B {
+            border-left: 6px solid #f59e0b !important;
+            background: linear-gradient(90deg, #fffbeb 0%, white 100%) !important;
+        }
+        @keyframes pulsoSutil {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.1); }
+            50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
         }
         .alumno-avatar {
             width: 52px; height: 52px;
@@ -237,6 +252,87 @@
         .nivel-A  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .nivel-B  { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
         .nivel-C  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        /* ══════════════════════════════════════
+           CARD DE ALERTA DE APOYO
+        ══════════════════════════════════════ */
+        #alertaApoyoCard {
+            display: none;
+            background: white;
+            padding: 20px 28px;
+            border-left: 1px solid var(--borde);
+            border-right: 1px solid var(--borde);
+            border-bottom: 2px solid var(--borde);
+        }
+        #alertaApoyoCard.visible { display: block; }
+        .alerta-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .alerta-icon {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .alerta-icon.critico { background: #fef2f2; }
+        .alerta-icon.precaucion { background: #fffbeb; }
+        .alerta-titulo {
+            font-family: 'Fraunces', serif;
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .alerta-titulo.critico { color: #dc2626; }
+        .alerta-titulo.precaucion { color: #f59e0b; }
+        .alerta-subtitulo {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--gris);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .alerta-mensaje {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--texto);
+        }
+        .alerta-recomendaciones {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .alerta-recomendacion {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .alerta-recomendacion .icono {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            background: var(--verde);
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 1px;
+        }
 
         /* ══════════════════════════════════════
            SELECTOR DE FECHA
@@ -616,6 +712,9 @@
         </div>
     </div>
 
+    <!-- Card de Alerta de Apoyo (solo visible para C y B) -->
+    <div id="alertaApoyoCard"></div>
+
     <!-- Selector de fecha -->
     <div class="fecha-selector-bar no-print">
         <label>📅 Registro:</label>
@@ -734,6 +833,43 @@ function extraerMateria(str) {
     if (!str) return '';
     // Extraer la materia de "Matemática A" → "Matemática"
     return str.replace(/\s*(AD|A|B|C)\s*$/, '').trim();
+}
+
+// Nueva función: parsear múltiples materias con notas del campo "Avance del niño"
+function parsearAvances(avanceTexto) {
+    /*
+     * Entrada: "Refuerzo de Comunicación B
+Lectura C"
+     * Salida: [
+     *   { materia: "Refuerzo de Comunicación", nivel: "B" },
+     *   { materia: "Lectura", nivel: "C" }
+     * ]
+     */
+    if (!avanceTexto || !avanceTexto.trim()) return [];
+    
+    const lineas = avanceTexto.split('\n').map(l => l.trim()).filter(l => l);
+    const avances = [];
+    
+    lineas.forEach(linea => {
+        const match = linea.match(/^(.+?)\s+(AD|A|B|C)$/);
+        if (match) {
+            avances.push({
+                materia: match[1].trim(),
+                nivel: match[2]
+            });
+        } else {
+            // Si no matchea el patrón, intentar capturar al menos el nivel
+            const soloNivel = linea.match(/\b(AD|A|B|C)\b/);
+            if (soloNivel) {
+                avances.push({
+                    materia: linea.replace(/\s*(AD|A|B|C)\s*/, '').trim() || 'Sin especificar',
+                    nivel: soloNivel[1]
+                });
+            }
+        }
+    });
+    
+    return avances;
 }
 
 function formatearFecha(str) {
@@ -923,15 +1059,106 @@ function mostrarRegistro() {
     }
     document.getElementById('badgeFecha').textContent = diaCorto;
 
-    // Meta chips del alumno
-    const nivel = normalizarNivel(reg.avance);
-    const materia = extraerMateria(reg.avance);
-    const nivelMeta = NIVEL_META[nivel] || null;
-    document.getElementById('alumnoMeta').innerHTML = `
-        <span class="meta-chip">📅 ${formatearFecha(fechaSel)}</span>
-        ${materia ? `<span class="meta-chip">📚 ${materia}</span>` : ''}
-        ${nivel && nivelMeta ? `<span class="nivel-chip nivel-${nivel}">${nivel} · ${nivelMeta.label}</span>` : ''}
-    `;
+    // Parsear múltiples avances (pueden haber varias materias en un mismo día)
+    const avances = parsearAvances(reg.avance);
+    
+    // Generar chips para cada materia/nivel
+    let chipsHTML = `<span class="meta-chip">📅 ${formatearFecha(fechaSel)}</span>`;
+    avances.forEach(av => {
+        const nivelMeta = NIVEL_META[av.nivel] || null;
+        chipsHTML += `<span class="meta-chip">📚 ${av.materia}</span>`;
+        if (nivelMeta) {
+            chipsHTML += `<span class="nivel-chip nivel-${av.nivel}">${av.nivel} · ${nivelMeta.label}</span>`;
+        }
+    });
+    document.getElementById('alumnoMeta').innerHTML = chipsHTML;
+
+    // ── ALERTA VISUAL SEGÚN NIVEL (ahora revisa TODOS los avances) ──
+    const alumnoCard = document.querySelector('.alumno-card');
+    const alertaCard = document.getElementById('alertaApoyoCard');
+    
+    // Limpiar clases previas
+    alumnoCard.classList.remove('alumno-card-alerta-C', 'alumno-card-alerta-B');
+    alertaCard.classList.remove('visible');
+    alertaCard.innerHTML = '';
+
+    // Detectar nivel crítico: si HAY al menos un C
+    const tieneC = avances.some(av => av.nivel === 'C');
+    const tieneB = avances.some(av => av.nivel === 'B');
+    
+    // Filtrar materias con C y B para el mensaje
+    const materiasC = avances.filter(av => av.nivel === 'C').map(av => av.materia);
+    const materiasB = avances.filter(av => av.nivel === 'B').map(av => av.materia);
+
+    if (tieneC) {
+        // CRÍTICO — Nivel C
+        alumnoCard.classList.add('alumno-card-alerta-C');
+        alertaCard.classList.add('visible');
+        alertaCard.innerHTML = `
+            <div class="alerta-header">
+                <div class="alerta-icon critico">🚨</div>
+                <div>
+                    <div class="alerta-titulo critico">Atención Necesaria — Nivel C (Inicio)</div>
+                    <div class="alerta-subtitulo">Su hijo/a requiere apoyo inmediato</div>
+                </div>
+            </div>
+            <div class="alerta-mensaje">
+                ${materiasC.length > 0 
+                    ? `En <strong>${materiasC.join(', ')}</strong>, su hijo/a está en la etapa inicial del aprendizaje.`
+                    : 'Su hijo/a está en la etapa inicial del aprendizaje.'}
+                Es fundamental el refuerzo en casa esta semana para evitar que se quede atrás. 
+                Con apoyo constante puede mejorar rápidamente.
+            </div>
+            <div class="alerta-recomendaciones">
+                <div class="alerta-recomendacion">
+                    <div class="icono">1</div>
+                    <span><strong>Practicar 20 minutos diarios</strong> con ejercicios básicos del tema</span>
+                </div>
+                <div class="alerta-recomendacion">
+                    <div class="icono">2</div>
+                    <span><strong>Revisar el cuaderno juntos</strong> y repasar lo visto en clase</span>
+                </div>
+                <div class="alerta-recomendacion">
+                    <div class="icono">3</div>
+                    <span><strong>Comunicarse con el docente</strong> para coordinar plan de refuerzo personalizado</span>
+                </div>
+            </div>
+        `;
+    } else if (tieneB && !tieneC) {
+        // PRECAUCIÓN — Nivel B
+        alumnoCard.classList.add('alumno-card-alerta-B');
+        alertaCard.classList.add('visible');
+        alertaCard.innerHTML = `
+            <div class="alerta-header">
+                <div class="alerta-icon precaucion">⚠️</div>
+                <div>
+                    <div class="alerta-titulo precaucion">Refuerzo Recomendado — Nivel B (En Proceso)</div>
+                    <div class="alerta-subtitulo">Su hijo/a está avanzando pero necesita apoyo</div>
+                </div>
+            </div>
+            <div class="alerta-mensaje">
+                ${materiasB.length > 0
+                    ? `En <strong>${materiasB.join(', ')}</strong>, su hijo/a está progresando hacia el nivel esperado.`
+                    : 'Su hijo/a está progresando hacia el nivel esperado.'}
+                Con práctica adicional en casa puede alcanzar el nivel "A" (Logrado). 
+                Es importante mantener el seguimiento para evitar retrocesos.
+            </div>
+            <div class="alerta-recomendaciones">
+                <div class="alerta-recomendacion">
+                    <div class="icono">✓</div>
+                    <span><strong>Reforzar 15 minutos diarios</strong> con ejercicios del cuaderno</span>
+                </div>
+                <div class="alerta-recomendacion">
+                    <div class="icono">✓</div>
+                    <span><strong>Repasar juntos las tareas</strong> antes de entregarlas</span>
+                </div>
+                <div class="alerta-recomendacion">
+                    <div class="icono">✓</div>
+                    <span><strong>Motivar y reconocer</strong> cada pequeño avance para mantener la confianza</span>
+                </div>
+            </div>
+        `;
+    }
 
     // Construir secciones
     let html = '';
@@ -954,24 +1181,33 @@ function mostrarRegistro() {
             </div>
         </div>`;
 
-    // ── 2. Avance del alumno ──
+    // ── 2. Avance del alumno (ahora muestra TODAS las materias) ──
     html += `
         <div class="seccion" style="animation-delay:0.1s">
             <div class="sec-header">
                 <div class="sec-icon verde">🎯</div>
                 <span class="sec-title">El avance de su hijo/a</span>
-            </div>
-            ${nivel && nivelMeta
-                ? `<div class="avance-box">
-                    <div class="avance-nivel-big ${nivel}">${nivel}</div>
-                    <div class="avance-desc">
-                        <div class="nivel-label ${nivel}">${nivelMeta.label}</div>
-                        <div class="nivel-text">${materia ? `En ${materia}: ` : ''}${nivelMeta.texto}</div>
-                    </div>
-                   </div>`
-                : `<div class="sec-content">${reg.avance || '<span class="empty">Sin registro de avance</span>'}</div>`
+            </div>`;
+    
+    if (avances.length > 0) {
+        avances.forEach(av => {
+            const nivelMeta = NIVEL_META[av.nivel] || null;
+            if (nivelMeta) {
+                html += `
+                    <div class="avance-box" style="margin-bottom: 12px;">
+                        <div class="avance-nivel-big ${av.nivel}">${av.nivel}</div>
+                        <div class="avance-desc">
+                            <div class="nivel-label ${av.nivel}">${nivelMeta.label}</div>
+                            <div class="nivel-text">En ${av.materia}: ${nivelMeta.texto}</div>
+                        </div>
+                    </div>`;
             }
-        </div>`;
+        });
+    } else {
+        html += `<div class="sec-content">${reg.avance || '<span class="empty">Sin registro de avance</span>'}</div>`;
+    }
+    
+    html += `</div>`;
 
     // ── 3. Observaciones ──
     if (reg.obs && reg.obs.trim()) {
