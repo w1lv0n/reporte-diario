@@ -664,7 +664,7 @@
 <!-- ── LOADING ── -->
 <div id="loadingScreen">
     <div class="spinner"></div>
-    <p style="font-size:15px;color:#64748b;font-weight:600;">Cargando reporte...</p>
+    <p style="font-size:13px;color:#64748b;font-weight:600;">Cargando reporte...</p>
 </div>
 
 <!-- ── ERROR / SELECTOR ── -->
@@ -680,7 +680,7 @@
     <div class="top-bar no-print">
         <div class="top-bar-brand">
             <div class="brand-dot"></div>
-            <span>Plataforma de Monitoreo — Reporte Diario</span>
+            <span>Plataforma I.E. — Reporte Diario</span>
         </div>
         <button class="print-btn" onclick="window.print()">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -694,8 +694,8 @@
     <div class="inst-header">
         <div class="inst-logo">🏫</div>
         <div class="inst-info">
-            <h1>I.E. N° 3055 — Túpac Amaru</h1>
-            <p>Comas · Monitoreo 3er Grado</p>
+            <h1>I.E. N° 3055 — Tupac Amaru</h1>
+            <p>Comas · Monitoreo 2024</p>
         </div>
         <div class="inst-badge">
             <div class="badge-label">Diario del Aula</div>
@@ -734,7 +734,7 @@
     </div>
 
     <div class="reporte-footer">
-        Generado por <strong>Plataforma de Monitoreo</strong> · Datos sincronizados desde Google Sheets
+        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
     </div>
 </div>
 
@@ -1174,9 +1174,9 @@ function mostrarRegistro() {
             <div class="sec-content">
                 ${actividades.length > 1
                     ? `<ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:4px;">
-                        ${actividades.map(a => `<li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--verde);font-weight:700;flex-shrink:0;">•</span><span>${a}</span></li>`).join('')}
+                        ${actividades.map(a => `<li style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--verde);font-weight:700;flex-shrink:0;">•</span><span>${linkificar(a)}</span></li>`).join('')}
                        </ul>`
-                    : `<p>${reg.activ || '<span class="empty">Sin registro</span>'}</p>`
+                    : `<p>${linkificar(reg.activ) || '<span class="empty">Sin registro</span>'}</p>`
                 }
             </div>
         </div>`;
@@ -1230,7 +1230,7 @@ function mostrarRegistro() {
                     <div class="sec-icon naranja">✏️</div>
                     <span class="sec-title">Tarea para casa</span>
                 </div>
-                ${tareas.map(t => `<div class="tarea-pill"><div class="tarea-dot"></div>${t}</div>`).join('')}
+                ${tareas.map(t => `<div class="tarea-pill"><div class="tarea-dot"></div>${linkificar(t)}</div>`).join('')}
             </div>`;
     }
 
@@ -1245,7 +1245,7 @@ function mostrarRegistro() {
                 </div>
                 <div class="reto-box">
                     <div class="reto-items">
-                        ${retos.map(r => `<div class="reto-item">${r}</div>`).join('')}
+                        ${retos.map(r => `<div class="reto-item">${linkificar(r)}</div>`).join('')}
                     </div>
                 </div>
             </div>`;
