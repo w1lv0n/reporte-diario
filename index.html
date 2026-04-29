@@ -1200,7 +1200,7 @@
             <span class="registro-chip" id="registroChip">Registro de hoy</span>
             <span class="registro-fecha-grande" id="registroFechaActual">—</span>
             <span class="registro-dia" id="registroDiaActual">—</span>
-            <span class="registro-contexto" id="registroContexto">Registro principal del día.</span>
+            <span class="registro-contexto" id="registroContexto">Registro cargado para hoy.</span>
             <div class="registro-resumen">
                 <span class="registro-alumno-area" id="registroAlumnoArea">—</span>
                 <div class="registro-avances-lista" id="registroAvancesLista"></div>
@@ -1732,15 +1732,14 @@ function mostrarRegistro() {
         registroChip.classList.toggle('historico', !esHoyReal);
     }
     if (registroFechaActual) {
-        const prefijoFecha = esHoyReal ? 'Hoy: ' : (esUltimoDisponible ? 'Último: ' : 'Viendo: ');
-        registroFechaActual.textContent = `${prefijoFecha}${formatearFechaSinDia(fechaSel)}`;
+        registroFechaActual.textContent = formatearFechaSinDia(fechaSel);
     }
     if (registroDiaActual) registroDiaActual.textContent = obtenerDia(fechaSel);
     const contextoTexto = esHoyReal
-        ? 'Registro principal del día.'
+        ? 'Registro cargado para hoy.'
         : (esUltimoDisponible
-            ? `Aún no hay registro cargado para hoy (${formatearHoyCalendario()}). Mostrando el último registro disponible.`
-            : `Registro anterior: ${tiempo.toLowerCase()}.`);
+            ? `Aún no hay registro cargado para hoy (${formatearHoyCalendario()}).`
+            : `${tiempo}.`);
     if (registroContexto) registroContexto.textContent = contextoTexto;
     if (modalContexto) modalContexto.textContent = esHoyReal
         ? 'Seleccione una fecha para revisar un registro anterior.'
@@ -1872,7 +1871,7 @@ function mostrarRegistro() {
         <div class="seccion" style="animation-delay:0.05s">
             <div class="sec-header">
                 <div class="sec-icon verde">📖</div>
-                <span class="sec-title">Lo que hicimos hoy</span>
+                <span class="sec-title">Lo que hicimos en clase</span>
             </div>
             <div class="sec-content">
                 ${actividades.length > 1
@@ -2126,7 +2125,7 @@ function renderizarTimelineModal(filtro = 'todos') {
         .sort((a,b) => compararFechasDesc(a.fecha, b.fecha));
 
     const timelineContainer = document.getElementById('timelineModalContainer');
-    const base = parsearFecha(fechaPrincipal()) || new Date();
+    const base = fechaHoyCalendario();
     const hace7Dias = new Date(base.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     timelineContainer.innerHTML = todosLosRegistros
