@@ -165,6 +165,7 @@
             text-align: right;
             flex-shrink: 0;
         }
+        .inst-badge { display: none; }
         .inst-badge .badge-label {
             font-size: 9px;
             color: rgba(255,255,255,0.65);
@@ -183,6 +184,7 @@
            TARJETA DEL ALUMNO
         ══════════════════════════════════════ */
         .alumno-card {
+            display: none;
             background: white;
             padding: 24px 28px 20px;
             border-left: 1px solid var(--borde);
@@ -377,6 +379,148 @@
             color: var(--gris);
             white-space: nowrap;
         }
+        .registro-actual-bar {
+            background: white;
+            border-left: 1px solid var(--borde);
+            border-right: 1px solid var(--borde);
+            border-bottom: 1px solid var(--borde);
+            padding: 22px 28px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+        }
+        .registro-actual-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+        .registro-chip {
+            align-self: flex-start;
+            background: var(--verde-lt);
+            color: var(--verde);
+            border: 1px solid var(--verde-md);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .registro-chip.historico {
+            background: var(--naranja-lt);
+            color: var(--naranja);
+            border-color: #fde68a;
+        }
+        .registro-fecha-grande {
+            font-family: 'Fraunces', serif;
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--verde);
+            line-height: 1.08;
+        }
+        .registro-dia {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--texto);
+            text-transform: capitalize;
+        }
+        .registro-contexto {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gris);
+            line-height: 1.35;
+        }
+        .registro-resumen {
+            margin-top: 10px;
+            padding-top: 12px;
+            border-top: 1px solid var(--borde);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .registro-alumno-area {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--texto);
+        }
+        .registro-nivel {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--gris);
+        }
+        .registro-avances-lista {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .registro-avance-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 10px;
+            background: var(--gris-lt);
+            border: 1px solid var(--borde);
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--texto);
+        }
+        .registro-avance-chip .nota {
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 900;
+        }
+        .registro-avance-chip.AD .nota { background: #dbeafe; color: #1e40af; }
+        .registro-avance-chip.A .nota { background: #dcfce7; color: #166534; }
+        .registro-avance-chip.B .nota { background: #fef9c3; color: #854d0e; }
+        .registro-avance-chip.C .nota { background: #fee2e2; color: #991b1b; }
+        .registro-contexto strong { color: var(--verde); }
+        .registro-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .registro-btn {
+            border: 2px solid var(--verde-md);
+            background: var(--verde-lt);
+            color: var(--verde);
+            border-radius: 10px;
+            padding: 9px 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .registro-btn:hover,
+        .registro-btn.primary {
+            background: var(--verde);
+            border-color: var(--verde);
+            color: white;
+        }
+        .registro-btn.secondary {
+            display: none;
+            background: white;
+            border-color: var(--borde);
+            color: var(--gris);
+        }
+        .registro-btn.secondary.visible { display: inline-flex; }
+        .consulta-dias-bar {
+            background: white;
+            border-left: 1px solid var(--borde);
+            border-right: 1px solid var(--borde);
+            border-bottom: 1px solid var(--borde);
+            padding: 16px 28px 24px;
+        }
+        .consulta-dias-bar .registro-btn {
+            width: 100%;
+            justify-content: center;
+            display: inline-flex;
+        }
 
         /* ══════════════════════════════════════
            CUERPO DEL REPORTE
@@ -555,25 +699,209 @@
         /* ══════════════════════════════════════
            MÚLTIPLES FECHAS — HISTORIAL
         ══════════════════════════════════════ */
-        .historial-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        /* Timeline Vertical — Historial escalable */
+        .filtros-rapidos {
+            display: flex;
             gap: 6px;
-            margin-top: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
         }
-        .hist-item {
-            background: var(--gris-lt);
-            border: 1px solid var(--borde);
-            border-radius: 10px;
-            padding: 8px 10px;
+        .filtro-btn {
+            padding: 8px 14px;
+            border: 2px solid var(--borde);
+            border-radius: 12px;
+            background: white;
+            color: var(--gris);
+            font-size: 11px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.15s;
-            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
-        .hist-item:hover { background: var(--verde-lt); border-color: var(--verde-md); }
-        .hist-item.active { background: var(--verde); border-color: var(--verde); color: white; }
-        .hist-item .hist-fecha { font-size: 12px; font-weight: 700; }
-        .hist-item .hist-nivel { font-size: 10px; font-weight: 600; opacity: 0.7; margin-top: 1px; }
+        .filtro-btn:hover { border-color: var(--verde); color: var(--verde); }
+        .filtro-btn.active {
+            background: var(--verde);
+            border-color: var(--verde);
+            color: white;
+        }
+        .filtros-ayuda {
+            font-size: 12px;
+            color: var(--gris);
+            line-height: 1.45;
+            margin: -4px 0 12px;
+        }
+        .modal-contexto {
+            background: var(--verde-lt);
+            border: 1px solid var(--verde-md);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--texto);
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        .fecha-picker-simple {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .fecha-picker-simple label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--gris);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .fecha-picker-simple input {
+            border: 1px solid var(--borde);
+            background: white;
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--texto);
+            outline: none;
+        }
+        .fecha-picker-simple input:focus {
+            border-color: var(--verde);
+            box-shadow: 0 0 0 3px var(--verde-lt);
+        }
+
+        .historial-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .historial-timeline::-webkit-scrollbar {
+            width: 6px;
+        }
+        .historial-timeline::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .historial-timeline::-webkit-scrollbar-thumb {
+            background: var(--verde-md);
+            border-radius: 10px;
+        }
+        .historial-timeline::-webkit-scrollbar-thumb:hover {
+            background: var(--verde);
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-left: 4px solid var(--borde);
+            background: var(--gris-lt);
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 0;
+        }
+        .timeline-item:first-child { border-radius: 8px 8px 0 0; }
+        .timeline-item:last-child { border-radius: 0 0 8px 8px; }
+        .timeline-item:hover {
+            background: var(--verde-lt);
+            border-left-color: var(--verde-md);
+        }
+        .timeline-item.active {
+            background: var(--verde-lt);
+            border-left-color: var(--verde);
+            font-weight: 600;
+        }
+
+        .timeline-fecha {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--texto);
+            min-width: 85px;
+        }
+        .timeline-dia {
+            font-size: 10px;
+            color: var(--gris);
+            font-weight: 600;
+        }
+        .timeline-tiempo {
+            font-size: 10px;
+            color: var(--verde);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-top: 2px;
+        }
+        .timeline-tiempo.hoy {
+            display: inline-flex;
+            align-self: flex-start;
+            background: var(--verde);
+            color: white;
+            border-radius: 999px;
+            padding: 2px 7px;
+            margin-top: 4px;
+        }
+        .timeline-nivel {
+            margin-left: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        .timeline-nivel-big {
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .timeline-nivel-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .timeline-avances {
+            margin-left: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            max-width: 58%;
+        }
+        .timeline-avance {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--texto);
+            text-align: right;
+            line-height: 1.2;
+        }
+        .timeline-avance .materia {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 150px;
+        }
+        .timeline-avance .nota {
+            min-width: 24px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .timeline-avance.AD .nota { color: #1e40af; }
+        .timeline-avance.A .nota { color: var(--verde); }
+        .timeline-avance.B .nota { color: var(--naranja); }
+        .timeline-avance.C .nota { color: var(--rojo); }
+        .timeline-nivel-big.AD { color: #1e40af; }
+        .timeline-nivel-big.A  { color: var(--verde); }
+        .timeline-nivel-big.B  { color: var(--naranja); }
+        .timeline-nivel-big.C  { color: var(--rojo); }
 
         /* ══════════════════════════════════════
            FOOTER
@@ -638,12 +966,157 @@
         @media print {
             @page { size: A4 portrait; margin: 12mm 14mm; }
             body { background: white; }
-            .top-bar, .print-btn, .fecha-selector-bar, #errorScreen { display: none !important; }
+            .top-bar, .print-btn, .fecha-selector-bar, .registro-actual-bar, #errorScreen { display: none !important; }
             #reportContainer { display: block !important; padding: 0; max-width: 100%; }
             .reporte-body { box-shadow: none; border-radius: 0 0 8px 8px; }
             .inst-header { border-radius: 8px 8px 0 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .seccion { page-break-inside: avoid; }
             .avance-box, .reto-box, .obs-box, .tarea-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        /* ══════════════════════════════════════
+           MODAL — BUSCAR OTRO DÍA
+        ══════════════════════════════════════ */
+        #modalBuscador {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        #modalBuscador.visible { display: flex; align-items: flex-end; }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 480px;
+            margin: auto;
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--borde);
+        }
+        .modal-header h2 {
+            font-family: 'Fraunces', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--texto);
+        }
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--gris-lt);
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--gris);
+            transition: all 0.15s;
+        }
+        .modal-close:hover { background: var(--verde-lt); color: var(--verde); }
+
+        .calendario-container {
+            margin-bottom: 24px;
+        }
+        .calendario-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .calendario-nav button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--borde);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--verde);
+            transition: all 0.15s;
+        }
+        .calendario-nav button:hover { background: var(--verde-lt); border-color: var(--verde); }
+
+        .calendario-mes-anio {
+            font-family: 'Fraunces', serif;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--texto);
+        }
+
+        .calendario-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .calendario-dia-header {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--gris);
+            text-transform: uppercase;
+            padding: 6px 0;
+        }
+        .calendario-dia {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid var(--borde);
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gris);
+            transition: all 0.15s;
+        }
+        .calendario-dia:hover { background: var(--verde-lt); border-color: var(--verde); }
+        .calendario-dia.hoy {
+            background: var(--verde);
+            color: white;
+            border-color: var(--verde);
+            font-weight: 800;
+        }
+        .calendario-dia.seleccionado {
+            box-shadow: 0 0 0 3px var(--verde-md);
+            border-color: var(--verde);
+        }
+        .calendario-dia.empty { background: transparent; border: none; cursor: default; }
+        .calendario-dia.empty:hover { background: transparent; }
+
+        /* Separador */
+        .modal-divider {
+            height: 1px;
+            background: var(--borde);
+            margin: 20px 0;
+        }
+
+        .modal-section-title {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--gris);
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
         }
 
         /* ══════════════════════════════════════
@@ -654,6 +1127,15 @@
             .inst-badge { display: none; }
             .alumno-card { padding: 18px; }
             .alumno-info h2 { font-size: 18px; }
+            .registro-actual-bar { padding: 16px 18px; }
+            .registro-fecha-grande { font-size: 23px; }
+            .registro-actual-bar { grid-template-columns: 1fr; }
+            .registro-actions,
+            .registro-btn,
+            .fecha-picker-simple,
+            .fecha-picker-simple input { width: 100%; }
+            .registro-btn { justify-content: center; }
+            .filtro-btn { flex: 1 1 100%; text-align: center; }
             .seccion { padding: 16px 18px; }
             .avance-nivel-big { font-size: 28px; width: 42px; }
         }
@@ -680,7 +1162,7 @@
     <div class="top-bar no-print">
         <div class="top-bar-brand">
             <div class="brand-dot"></div>
-            <span>Plataforma I.E. — Reporte Diario</span>
+            <span>REPORTE DIARIO</span>
         </div>
         <button class="print-btn" onclick="window.print()">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -694,8 +1176,8 @@
     <div class="inst-header">
         <div class="inst-logo">🏫</div>
         <div class="inst-info">
-            <h1>I.E. N° 3055 — Tupac Amaru</h1>
-            <p>Comas · Monitoreo 2024</p>
+            <h1>I.E. N° 3055 — Túpac Amaru</h1>
+            <p>Comas · Monitoreo 3er Grado</p>
         </div>
         <div class="inst-badge">
             <div class="badge-label">Diario del Aula</div>
@@ -712,17 +1194,74 @@
         </div>
     </div>
 
+    <!-- Fecha visible y acciones principales -->
+    <div class="registro-actual-bar no-print">
+        <div class="registro-actual-info">
+            <span class="registro-chip" id="registroChip">Registro de hoy</span>
+            <span class="registro-fecha-grande" id="registroFechaActual">—</span>
+            <span class="registro-dia" id="registroDiaActual">—</span>
+            <span class="registro-contexto" id="registroContexto">Registro principal del día.</span>
+            <div class="registro-resumen">
+                <span class="registro-alumno-area" id="registroAlumnoArea">—</span>
+                <div class="registro-avances-lista" id="registroAvancesLista"></div>
+            </div>
+            <span class="total-registros" id="totalRegistros"></span>
+        </div>
+        <div class="registro-actions">
+            <button class="registro-btn secondary" id="volverHoyBtn" onclick="volverAHoy()">Volver a hoy</button>
+        </div>
+    </div>
+
     <!-- Card de Alerta de Apoyo (solo visible para C y B) -->
     <div id="alertaApoyoCard"></div>
 
-    <!-- Selector de fecha -->
-    <div class="fecha-selector-bar no-print">
-        <label>📅 Registro:</label>
-        <select id="fechaSelect" onchange="mostrarRegistro()">
-            <option value="">— Selecciona una fecha —</option>
-        </select>
-        <span class="total-registros" id="totalRegistros"></span>
+    <!-- Modal Buscador -->
+    <div id="modalBuscador" onclick="if(event.target.id==='modalBuscador') cerrarModalBuscador()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Buscar otro día</h2>
+                <button class="modal-close" onclick="cerrarModalBuscador()">✕</button>
+            </div>
+
+            <div class="modal-contexto" id="modalContextoRegistro">Seleccione una fecha para revisar un registro anterior.</div>
+
+            <!-- Calendario -->
+            <div class="calendario-container">
+                <div class="calendario-nav">
+                    <button onclick="mesAnterior()">◀</button>
+                    <div class="calendario-mes-anio" id="mesAnioDisplay"></div>
+                    <button onclick="mesSiguiente()">▶</button>
+                </div>
+                <div class="calendario-grid" id="calendarioGrid"></div>
+            </div>
+
+            <div class="modal-divider"></div>
+
+            <!-- Filtros Rápidos -->
+            <div style="margin-bottom: 20px;">
+                <p class="modal-section-title">Filtros rápidos</p>
+                <p class="filtros-ayuda">Elija una opción para encontrar el registro que necesita.</p>
+                <div class="filtros-rapidos" style="margin-bottom: 0;">
+                    <button class="filtro-btn active" onclick="filtrarHistorialModal('todos', this)">📋 Todos mis registros</button>
+                    <button class="filtro-btn" onclick="filtrarHistorialModal('semana', this)">📅 Esta última semana</button>
+                    <button class="filtro-btn" onclick="filtrarHistorialModal('CB', this)">⚠️ Necesita refuerzo (C y B)</button>
+                </div>
+            </div>
+
+            <div class="modal-divider"></div>
+
+            <!-- Timeline de Últimos Registros -->
+            <div>
+                <p class="modal-section-title">Registros disponibles</p>
+                <div class="historial-timeline" id="timelineModalContainer"></div>
+            </div>
+        </div>
     </div>
+
+    <!-- Select oculto (para mantener funcionalidad JS) -->
+    <select id="fechaSelect" onchange="mostrarRegistro()" style="display:none;">
+        <option value="">— Selecciona una fecha —</option>
+    </select>
 
     <!-- Cuerpo dinámico del reporte -->
     <div class="reporte-body">
@@ -731,6 +1270,10 @@
                 <p style="font-size:14px;">Selecciona una fecha para ver el reporte</p>
             </div>
         </div>
+    </div>
+
+    <div class="consulta-dias-bar no-print">
+        <button class="registro-btn primary" onclick="abrirModalBuscador()">📅 Ver otros días</button>
     </div>
 
     <div class="reporte-footer">
@@ -889,6 +1432,106 @@ function formatearFecha(str) {
     return str;
 }
 
+function formatearFechaSinDia(str) {
+    const fecha = parsearFecha(str);
+    if (!fecha) return str || '';
+    return fecha.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function parsearFecha(str) {
+    if (!str) return null;
+    const partes = str.split(/[\/\-]/);
+    if (partes.length !== 3) return null;
+    const [a, b, c] = partes;
+    const anio = a.length === 4 ? Number(a) : Number(c);
+    const mes = Number(b);
+    const dia = a.length === 4 ? Number(c) : Number(a);
+    const fecha = new Date(anio, mes - 1, dia);
+    return isNaN(fecha) ? null : fecha;
+}
+
+function compararFechasDesc(a, b) {
+    const fechaA = parsearFecha(a) || new Date(0);
+    const fechaB = parsearFecha(b) || new Date(0);
+    return fechaB - fechaA;
+}
+
+function fechaInputValue(str) {
+    const fecha = parsearFecha(str);
+    if (!fecha) return '';
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+}
+
+function formatearFechaCorta(str) {
+    const fecha = parsearFecha(str);
+    if (!fecha) return str || '';
+    return `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function mismaFecha(a, b) {
+    return fechaInputValue(a) === fechaInputValue(b);
+}
+
+function fechaPrincipal() {
+    return [...new Set(alumnoData.map(r => r.fecha).filter(Boolean))].sort(compararFechasDesc)[0] || '';
+}
+
+function diasDesdePrincipal(fechaStr) {
+    const base = parsearFecha(fechaPrincipal());
+    const fecha = parsearFecha(fechaStr);
+    if (!base || !fecha) return null;
+    return Math.round((base - fecha) / (24 * 60 * 60 * 1000));
+}
+
+function textoTiempoRegistro(fechaStr) {
+    const dias = diasDesdePrincipal(fechaStr);
+    if (dias === null) return 'Registro seleccionado';
+    if (dias === 0) return 'Hoy';
+    if (dias === 1) return 'Ayer';
+    if (dias < 7) return `Hace ${dias} días`;
+    const semanas = Math.floor(dias / 7);
+    return semanas === 1 ? 'Hace 1 semana' : `Hace ${semanas} semanas`;
+}
+
+function resumenAvancePrincipal(avances) {
+    if (!avances || avances.length === 0) {
+        return { materia: 'Área no registrada', nivel: '', label: 'Sin dato' };
+    }
+    const prioridad = { C: 4, B: 3, A: 2, AD: 1 };
+    const principal = [...avances].sort((a, b) => (prioridad[b.nivel] || 0) - (prioridad[a.nivel] || 0))[0];
+    const meta = NIVEL_META[principal.nivel] || {};
+    return {
+        materia: principal.materia || 'Área no registrada',
+        nivel: principal.nivel || '',
+        label: meta.label || 'Sin dato'
+    };
+}
+
+function renderAvanceChip(av) {
+    const meta = NIVEL_META[av.nivel] || {};
+    const etiqueta = meta.label ? `${av.nivel} · ${meta.label}` : av.nivel;
+    return `
+        <span class="registro-avance-chip ${av.nivel}">
+            <span>${av.materia}</span>
+            <span class="nota">${etiqueta}</span>
+        </span>`;
+}
+
+function renderTimelineAvances(avances) {
+    if (!avances || avances.length === 0) {
+        return `
+            <div class="timeline-avance">
+                <span class="materia">Sin calificación registrada</span>
+                <span class="nota">—</span>
+            </div>`;
+    }
+    return avances.map(av => `
+        <div class="timeline-avance ${av.nivel}">
+            <span class="materia">${av.materia}</span>
+            <span class="nota">${av.nivel}</span>
+        </div>`).join('');
+}
+
 // ══════════════════════════════════════════════
 //  INICIALIZACIÓN
 // ══════════════════════════════════════════════
@@ -1012,7 +1655,7 @@ function mostrarReporte() {
     document.getElementById('alumnoNombre').textContent = alumnoActual;
 
     // Llenar el select de fechas (ordenadas desc — más reciente primero)
-    const fechas = [...new Set(alumnoData.map(r => r.fecha))].sort().reverse();
+    const fechas = [...new Set(alumnoData.map(r => r.fecha).filter(Boolean))].sort(compararFechasDesc);
     const sel = document.getElementById('fechaSelect');
     sel.innerHTML = '<option value="">— Selecciona una fecha —</option>';
     fechas.forEach(f => {
@@ -1023,7 +1666,7 @@ function mostrarReporte() {
     });
 
     document.getElementById('totalRegistros').textContent =
-        `${alumnoData.length} registro${alumnoData.length !== 1 ? 's' : ''} encontrado${alumnoData.length !== 1 ? 's' : ''}`;
+        `${alumnoData.length} registro${alumnoData.length !== 1 ? 's' : ''} disponible${alumnoData.length !== 1 ? 's' : ''}`;
 
     // Seleccionar automáticamente la fecha más reciente
     if (fechas.length > 0) {
@@ -1059,11 +1702,44 @@ function mostrarRegistro() {
     }
     document.getElementById('badgeFecha').textContent = diaCorto;
 
+    const esPrincipal = fechaSel === fechaPrincipal();
+    const tiempo = textoTiempoRegistro(fechaSel);
+    const registroChip = document.getElementById('registroChip');
+    const registroFechaActual = document.getElementById('registroFechaActual');
+    const registroDiaActual = document.getElementById('registroDiaActual');
+    const registroContexto = document.getElementById('registroContexto');
+    const modalContexto = document.getElementById('modalContextoRegistro');
+    const volverHoyBtn = document.getElementById('volverHoyBtn');
+    if (registroChip) {
+        registroChip.textContent = esPrincipal ? 'Registro de hoy' : 'Registro anterior';
+        registroChip.classList.toggle('historico', !esPrincipal);
+    }
+    if (registroFechaActual) {
+        registroFechaActual.textContent = `${esPrincipal ? 'Hoy: ' : 'Viendo: '}${formatearFechaSinDia(fechaSel)}`;
+    }
+    if (registroDiaActual) registroDiaActual.textContent = obtenerDia(fechaSel);
+    const contextoTexto = esPrincipal
+        ? 'Registro principal del día.'
+        : `Registro anterior: ${tiempo.toLowerCase()}.`;
+    if (registroContexto) registroContexto.textContent = contextoTexto;
+    if (modalContexto) modalContexto.textContent = esPrincipal
+        ? 'Seleccione una fecha para revisar un registro anterior.'
+        : `${contextoTexto} Puede elegir otra fecha de la lista.`;
+    if (volverHoyBtn) volverHoyBtn.classList.toggle('visible', !esPrincipal);
+
     // Parsear múltiples avances (pueden haber varias materias en un mismo día)
     const avances = parsearAvances(reg.avance);
+    const registroAlumnoArea = document.getElementById('registroAlumnoArea');
+    const registroAvancesLista = document.getElementById('registroAvancesLista');
+    if (registroAlumnoArea) registroAlumnoArea.textContent = alumnoActual;
+    if (registroAvancesLista) {
+        registroAvancesLista.innerHTML = avances.length
+            ? avances.map(renderAvanceChip).join('')
+            : '<span class="registro-nivel">Sin avance registrado</span>';
+    }
     
     // Generar chips para cada materia/nivel
-    let chipsHTML = `<span class="meta-chip">📅 ${formatearFecha(fechaSel)}</span>`;
+    let chipsHTML = '';
     avances.forEach(av => {
         const nivelMeta = NIVEL_META[av.nivel] || null;
         chipsHTML += `<span class="meta-chip">📚 ${av.materia}</span>`;
@@ -1075,10 +1751,12 @@ function mostrarRegistro() {
 
     // ── ALERTA VISUAL SEGÚN NIVEL (ahora revisa TODOS los avances) ──
     const alumnoCard = document.querySelector('.alumno-card');
+    const registroBar = document.querySelector('.registro-actual-bar');
     const alertaCard = document.getElementById('alertaApoyoCard');
     
     // Limpiar clases previas
     alumnoCard.classList.remove('alumno-card-alerta-C', 'alumno-card-alerta-B');
+    registroBar.classList.remove('alumno-card-alerta-C', 'alumno-card-alerta-B');
     alertaCard.classList.remove('visible');
     alertaCard.innerHTML = '';
 
@@ -1093,6 +1771,7 @@ function mostrarRegistro() {
     if (tieneC) {
         // CRÍTICO — Nivel C
         alumnoCard.classList.add('alumno-card-alerta-C');
+        registroBar.classList.add('alumno-card-alerta-C');
         alertaCard.classList.add('visible');
         alertaCard.innerHTML = `
             <div class="alerta-header">
@@ -1127,6 +1806,7 @@ function mostrarRegistro() {
     } else if (tieneB && !tieneC) {
         // PRECAUCIÓN — Nivel B
         alumnoCard.classList.add('alumno-card-alerta-B');
+        registroBar.classList.add('alumno-card-alerta-B');
         alertaCard.classList.add('visible');
         alertaCard.innerHTML = `
             <div class="alerta-header">
@@ -1251,36 +1931,33 @@ function mostrarRegistro() {
             </div>`;
     }
 
-    // ── 6. Historial mini (otras fechas disponibles) ──
-    const otrasFechas = alumnoData
-        .map(r => ({ fecha: r.fecha, nivel: normalizarNivel(r.avance) }))
-        .filter(r => r.fecha !== fechaSel)
-        .sort((a,b) => b.fecha.localeCompare(a.fecha))
-        .slice(0, 8);
-
-    if (otrasFechas.length > 0) {
-        html += `
-            <div class="seccion" style="animation-delay:0.3s;background:var(--gris-lt)">
-                <div class="sec-header">
-                    <div class="sec-icon gris">📅</div>
-                    <span class="sec-title">Otros registros disponibles</span>
-                </div>
-                <div class="historial-grid">
-                    ${otrasFechas.map(r => `
-                        <div class="hist-item" onclick="cambiarFecha('${r.fecha}')">
-                            <div class="hist-fecha">${r.fecha}</div>
-                            ${r.nivel ? `<div class="hist-nivel nivel-${r.nivel}">${r.nivel} — ${(NIVEL_META[r.nivel]||{}).label||''}</div>` : ''}
-                        </div>`).join('')}
-                </div>
-            </div>`;
-    }
-
     document.getElementById('reporteContenido').innerHTML = html;
 }
 
 function cambiarFecha(fecha) {
     document.getElementById('fechaSelect').value = fecha;
     mostrarRegistro();
+    document.getElementById('reportContainer').scrollIntoView({ behavior: 'smooth' });
+}
+
+function volverAHoy() {
+    const fecha = fechaPrincipal();
+    if (!fecha) return;
+    document.getElementById('fechaSelect').value = fecha;
+    mostrarRegistro();
+    document.getElementById('reportContainer').scrollIntoView({ behavior: 'smooth' });
+}
+
+function buscarRegistroPorFecha(inputValue) {
+    if (!inputValue) return;
+    const registro = alumnoData.find(r => mismaFecha(r.fecha, inputValue));
+    if (!registro) {
+        alert('No hay registro para esa fecha. Pruebe con otra fecha o use los filtros rápidos.');
+        return;
+    }
+    document.getElementById('fechaSelect').value = registro.fecha;
+    mostrarRegistro();
+    cerrarModalBuscador();
     document.getElementById('reportContainer').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1298,6 +1975,167 @@ function linkificar(texto) {
         const display = url.length > 45 ? url.substring(0, 42) + '...' : url;
         return '<a href="' + href + '" target="_blank" rel="noopener" style="color:#1a7f5a;font-weight:600;text-decoration:underline;word-break:break-all;">' + display + '</a>';
     });
+}
+
+// Obtener nombre del día en español
+function obtenerDia(fechaStr) {
+    const partes = fechaStr.split(/[\/\-]/);
+    let dia, mes, anio;
+    if (partes[0].length === 4) { anio = partes[0]; mes = partes[1]; dia = partes[2]; }
+    else { dia = partes[0]; mes = partes[1]; anio = partes[2]; }
+    const fecha = new Date(anio, mes - 1, dia);
+    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return dias[fecha.getDay()];
+}
+
+// Variables globales para el calendar
+let mesActual = new Date().getMonth();
+let anioActual = new Date().getFullYear();
+
+// Abrir modal buscador
+function abrirModalBuscador() {
+    document.getElementById('modalBuscador').classList.add('visible');
+    const modalTitle = document.querySelector('#modalBuscador .modal-header h2');
+    if (modalTitle) modalTitle.textContent = '📅 Buscar otro día';
+    const fechaSel = document.getElementById('fechaSelect').value || fechaPrincipal();
+    const fechaBase = parsearFecha(fechaSel);
+    if (fechaBase) {
+        mesActual = fechaBase.getMonth();
+        anioActual = fechaBase.getFullYear();
+    }
+    renderizarCalendario();
+    renderizarTimelineModal('todos');
+}
+
+// Cerrar modal buscador
+function cerrarModalBuscador() {
+    document.getElementById('modalBuscador').classList.remove('visible');
+}
+
+// Renderizar calendario
+function renderizarCalendario() {
+    const mesDisplay = document.getElementById('mesAnioDisplay');
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    mesDisplay.textContent = meses[mesActual] + ' ' + anioActual;
+
+    const calendarioGrid = document.getElementById('calendarioGrid');
+    calendarioGrid.innerHTML = '';
+
+    // Headers de días
+    const diasSemana = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    diasSemana.forEach(d => {
+        const header = document.createElement('div');
+        header.className = 'calendario-dia-header';
+        header.textContent = d;
+        calendarioGrid.appendChild(header);
+    });
+
+    // Días del mes
+    const primerDia = new Date(anioActual, mesActual, 1).getDay();
+    const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
+
+    // Espacios vacíos antes del primer día
+    for (let i = 0; i < (primerDia === 0 ? 6 : primerDia - 1); i++) {
+        const empty = document.createElement('div');
+        empty.className = 'calendario-dia empty';
+        calendarioGrid.appendChild(empty);
+    }
+
+    // Días del mes
+    const fechaHoy = parsearFecha(fechaPrincipal()) || new Date();
+    const fechaSel = document.getElementById('fechaSelect').value;
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+        const btn = document.createElement('button');
+        btn.className = 'calendario-dia';
+        btn.textContent = dia;
+
+        // Marcar hoy
+        if (dia === fechaHoy.getDate() && mesActual === fechaHoy.getMonth() && anioActual === fechaHoy.getFullYear()) {
+            btn.classList.add('hoy');
+        }
+
+        // Convertir a formato DD/MM/YYYY
+        const diaStr = String(dia).padStart(2, '0');
+        const mesStr = String(mesActual + 1).padStart(2, '0');
+        const fechaStr = diaStr + '/' + mesStr + '/' + anioActual;
+        if (mismaFecha(fechaStr, fechaSel)) {
+            btn.classList.add('seleccionado');
+        }
+
+        // Solo habilitar si existe registro en esa fecha
+        const tieneRegistro = alumnoData.some(r => r.fecha === fechaStr);
+        if (!tieneRegistro) {
+            btn.style.opacity = '0.3';
+            btn.style.cursor = 'not-allowed';
+            btn.style.pointerEvents = 'none';
+        } else {
+            btn.onclick = () => {
+                document.getElementById('fechaSelect').value = fechaStr;
+                mostrarRegistro();
+                cerrarModalBuscador();
+            };
+        }
+
+        calendarioGrid.appendChild(btn);
+    }
+}
+
+function mesAnterior() {
+    mesActual--;
+    if (mesActual < 0) { mesActual = 11; anioActual--; }
+    renderizarCalendario();
+}
+
+function mesSiguiente() {
+    mesActual++;
+    if (mesActual > 11) { mesActual = 0; anioActual++; }
+    renderizarCalendario();
+}
+
+// Renderizar timeline en el modal
+function renderizarTimelineModal(filtro = 'todos') {
+    const todosLosRegistros = alumnoData
+        .map(r => ({
+            fecha: r.fecha,
+            avances: parsearAvances(r.avance)
+        }))
+        .sort((a,b) => compararFechasDesc(a.fecha, b.fecha));
+
+    const timelineContainer = document.getElementById('timelineModalContainer');
+    const base = parsearFecha(fechaPrincipal()) || new Date();
+    const hace7Dias = new Date(base.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    timelineContainer.innerHTML = todosLosRegistros
+        .filter(r => {
+            if (filtro === 'semana') {
+                const itemFecha = parsearFecha(r.fecha);
+                return itemFecha >= hace7Dias;
+            }
+            if (filtro === 'CB') return r.avances.some(av => av.nivel === 'C' || av.nivel === 'B');
+            return true;
+        })
+        .map(r => `
+            <div class="timeline-item ${r.fecha === document.getElementById('fechaSelect').value ? 'active' : ''}" data-fecha="${r.fecha}"
+                 onclick="{ document.getElementById('fechaSelect').value='${r.fecha}'; mostrarRegistro(); cerrarModalBuscador(); }">
+                <div>
+                    <div class="timeline-fecha">${formatearFechaCorta(r.fecha)}</div>
+                    <div class="timeline-dia">${obtenerDia(r.fecha)}</div>
+                    <div class="timeline-tiempo ${r.fecha === fechaPrincipal() ? 'hoy' : ''}">${r.fecha === fechaPrincipal() ? 'HOY' : textoTiempoRegistro(r.fecha).toLowerCase()}</div>
+                </div>
+                <div class="timeline-avances">
+                    ${renderTimelineAvances(r.avances)}
+                </div>
+            </div>`)
+        .join('');
+}
+
+// Filtrar timeline en el modal
+function filtrarHistorialModal(filtro, btn) {
+    const container = btn.parentElement;
+    container.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderizarTimelineModal(filtro);
 }
 
 window.onload = init;
