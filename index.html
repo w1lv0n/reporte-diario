@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte Diario — Plataforma de Monitoreo</title>
+    <title>Reporte Diario — Plataforma I.E.</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -1277,7 +1277,7 @@
     </div>
 
     <div class="reporte-footer">
-        Generado por <strong>Plataforma I.E. Monitoreo</strong> · Datos sincronizados desde Google Sheets
+        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
     </div>
 </div>
 
@@ -1472,22 +1472,37 @@ function mismaFecha(a, b) {
     return fechaInputValue(a) === fechaInputValue(b);
 }
 
+function fechaHoyCalendario() {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+}
+
+function esFechaHoyReal(fechaStr) {
+    const fecha = parsearFecha(fechaStr);
+    const hoy = fechaHoyCalendario();
+    return !!fecha && fecha.getTime() === hoy.getTime();
+}
+
+function formatearHoyCalendario() {
+    return fechaHoyCalendario().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 function fechaPrincipal() {
     return [...new Set(alumnoData.map(r => r.fecha).filter(Boolean))].sort(compararFechasDesc)[0] || '';
 }
 
-function diasDesdePrincipal(fechaStr) {
-    const base = parsearFecha(fechaPrincipal());
+function diasDesdeHoy(fechaStr) {
     const fecha = parsearFecha(fechaStr);
-    if (!base || !fecha) return null;
-    return Math.round((base - fecha) / (24 * 60 * 60 * 1000));
+    if (!fecha) return null;
+    return Math.round((fechaHoyCalendario() - fecha) / (24 * 60 * 60 * 1000));
 }
 
 function textoTiempoRegistro(fechaStr) {
-    const dias = diasDesdePrincipal(fechaStr);
+    const dias = diasDesdeHoy(fechaStr);
     if (dias === null) return 'Registro seleccionado';
     if (dias === 0) return 'Hoy';
     if (dias === 1) return 'Ayer';
+    if (dias < 0) return 'Registro programado';
     if (dias < 7) return `Hace ${dias} días`;
     const semanas = Math.floor(dias / 7);
     return semanas === 1 ? 'Hace 1 semana' : `Hace ${semanas} semanas`;
@@ -1703,6 +1718,8 @@ function mostrarRegistro() {
     document.getElementById('badgeFecha').textContent = diaCorto;
 
     const esPrincipal = fechaSel === fechaPrincipal();
+    const esHoyReal = esFechaHoyReal(fechaSel);
+    const esUltimoDisponible = esPrincipal && !esHoyReal;
     const tiempo = textoTiempoRegistro(fechaSel);
     const registroChip = document.getElementById('registroChip');
     const registroFechaActual = document.getElementById('registroFechaActual');
@@ -1711,21 +1728,27 @@ function mostrarRegistro() {
     const modalContexto = document.getElementById('modalContextoRegistro');
     const volverHoyBtn = document.getElementById('volverHoyBtn');
     if (registroChip) {
-        registroChip.textContent = esPrincipal ? 'Registro de hoy' : 'Registro anterior';
-        registroChip.classList.toggle('historico', !esPrincipal);
+        registroChip.textContent = esHoyReal ? 'Registro de hoy' : (esUltimoDisponible ? 'Último registro disponible' : 'Registro anterior');
+        registroChip.classList.toggle('historico', !esHoyReal);
     }
     if (registroFechaActual) {
-        registroFechaActual.textContent = `${esPrincipal ? 'Hoy: ' : 'Viendo: '}${formatearFechaSinDia(fechaSel)}`;
+        const prefijoFecha = esHoyReal ? 'Hoy: ' : (esUltimoDisponible ? 'Último: ' : 'Viendo: ');
+        registroFechaActual.textContent = `${prefijoFecha}${formatearFechaSinDia(fechaSel)}`;
     }
     if (registroDiaActual) registroDiaActual.textContent = obtenerDia(fechaSel);
-    const contextoTexto = esPrincipal
+    const contextoTexto = esHoyReal
         ? 'Registro principal del día.'
-        : `Registro anterior: ${tiempo.toLowerCase()}.`;
+        : (esUltimoDisponible
+            ? `Aún no hay registro cargado para hoy (${formatearHoyCalendario()}). Mostrando el último registro disponible.`
+            : `Registro anterior: ${tiempo.toLowerCase()}.`);
     if (registroContexto) registroContexto.textContent = contextoTexto;
-    if (modalContexto) modalContexto.textContent = esPrincipal
+    if (modalContexto) modalContexto.textContent = esHoyReal
         ? 'Seleccione una fecha para revisar un registro anterior.'
         : `${contextoTexto} Puede elegir otra fecha de la lista.`;
-    if (volverHoyBtn) volverHoyBtn.classList.toggle('visible', !esPrincipal);
+    if (volverHoyBtn) {
+        volverHoyBtn.textContent = esFechaHoyReal(fechaPrincipal()) ? 'Volver a hoy' : 'Volver al último';
+        volverHoyBtn.classList.toggle('visible', !esPrincipal);
+    }
 
     // Parsear múltiples avances (pueden haber varias materias en un mismo día)
     const avances = parsearAvances(reg.avance);
@@ -2043,7 +2066,7 @@ function renderizarCalendario() {
     }
 
     // Días del mes
-    const fechaHoy = parsearFecha(fechaPrincipal()) || new Date();
+    const fechaHoy = fechaHoyCalendario();
     const fechaSel = document.getElementById('fechaSelect').value;
     for (let dia = 1; dia <= diasEnMes; dia++) {
         const btn = document.createElement('button');
@@ -2115,18 +2138,23 @@ function renderizarTimelineModal(filtro = 'todos') {
             if (filtro === 'CB') return r.avances.some(av => av.nivel === 'C' || av.nivel === 'B');
             return true;
         })
-        .map(r => `
+        .map(r => {
+            const esHoyReal = esFechaHoyReal(r.fecha);
+            const esUltimoDisponible = r.fecha === fechaPrincipal() && !esHoyReal;
+            const tiempoLabel = esHoyReal ? 'HOY' : (esUltimoDisponible ? 'ÚLTIMO' : textoTiempoRegistro(r.fecha).toLowerCase());
+            return `
             <div class="timeline-item ${r.fecha === document.getElementById('fechaSelect').value ? 'active' : ''}" data-fecha="${r.fecha}"
                  onclick="{ document.getElementById('fechaSelect').value='${r.fecha}'; mostrarRegistro(); cerrarModalBuscador(); }">
                 <div>
                     <div class="timeline-fecha">${formatearFechaCorta(r.fecha)}</div>
                     <div class="timeline-dia">${obtenerDia(r.fecha)}</div>
-                    <div class="timeline-tiempo ${r.fecha === fechaPrincipal() ? 'hoy' : ''}">${r.fecha === fechaPrincipal() ? 'HOY' : textoTiempoRegistro(r.fecha).toLowerCase()}</div>
+                    <div class="timeline-tiempo ${esHoyReal ? 'hoy' : ''}">${tiempoLabel}</div>
                 </div>
                 <div class="timeline-avances">
                     ${renderTimelineAvances(r.avances)}
                 </div>
-            </div>`)
+            </div>`;
+        })
         .join('');
 }
 
