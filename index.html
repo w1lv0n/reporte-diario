@@ -1139,6 +1139,23 @@
             .seccion { padding: 16px 18px; }
             .avance-nivel-big { font-size: 28px; width: 42px; }
         }
+        /* ══════════════════════════════════════
+           SECCIONES DE IMÁGENES
+        ══════════════════════════════════════ */
+        .imagen-section {
+            margin: 0;
+        }
+        .imagen-container {
+            width: 100%;
+            overflow: hidden;
+        }
+        .imagen-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            max-width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -1277,7 +1294,7 @@
     </div>
 
     <div class="reporte-footer">
-        Generado por <strong>Plataforma de Monitoreo - Prof. Melina Tenorio</strong> · Datos sincronizados desde Google Sheets
+        Generado por <strong>Plataforma I.E. Monitoreo 2024</strong> · Datos sincronizados desde Google Sheets
     </div>
 </div>
 
@@ -1578,9 +1595,13 @@ async function init() {
             avance: gi("avance del niño",           "avance"),
             obs:    gi("observaciones/notas",        "observ"),
             reto:   gi("reto de mañana",             "reto"),
-            tarea:  gi("tarea",       "tarea")
+            tarea:  gi("tarea",       "tarea"),
+            foto_clase:  gi("foto_clase_url",  "foto_clas"),
+            foto_alumno: gi("foto_alumno_url", "foto_alum")
         };
+        console.log("Headers detectados:", headers);
         console.log("Índices de columnas:", idx);
+        console.log("Total columnas en CSV:", headers.length);
 
         // Nombres de alumnos válidos: columna B del CSV (índice 1 fijo como fallback)
         // Un alumno válido tiene: solo letras, espacios y tildes — sin comas, sin números largos
@@ -1604,7 +1625,9 @@ async function init() {
             avance: (idx.avance >= 0 ? r[idx.avance] : r[3]) || '',
             obs:    (idx.obs    >= 0 ? r[idx.obs]    : r[4]) || '',
             reto:   (idx.reto   >= 0 ? r[idx.reto]   : r[5]) || '',
-            tarea:  (idx.tarea  >= 0 ? r[idx.tarea]  : r[6]) || ''
+            tarea:  (idx.tarea  >= 0 ? r[idx.tarea]  : r[6]) || '',
+            foto_clase:  (idx.foto_clase  >= 0 ? r[idx.foto_clase]  : '') || '',
+            foto_alumno: (idx.foto_alumno >= 0 ? r[idx.foto_alumno] : '') || ''
         }));
 
         console.log("Total registros procesados:", allData.length);
@@ -1883,6 +1906,14 @@ function mostrarRegistro() {
             </div>
         </div>`;
 
+    // ── 1.5. Imagen de clase (opcional, sin título) ──
+    if (reg.foto_clase && reg.foto_clase.trim()) {
+        const urlFoto = convertirUrlDrive(reg.foto_clase.trim());
+        if (urlFoto) {
+            html += `<div class="imagen-section" style="animation-delay:0.075s"><div class="imagen-container"><img src="${urlFoto}" alt="Foto de clase" loading="lazy" onerror="this.parentElement.parentElement.style.display='none';" /></div></div>`;
+        }
+    }
+
     // ── 2. Avance del alumno (ahora muestra TODAS las materias) ──
     html += `
         <div class="seccion" style="animation-delay:0.1s">
@@ -1921,6 +1952,14 @@ function mostrarRegistro() {
                 </div>
                 <div class="obs-box">${linkificar(reg.obs).replace(/\n/g, '<br>')}</div>
             </div>`;
+    }
+
+    // ── 3.5. Imagen del alumno (opcional, sin título) ──
+    if (reg.foto_alumno && reg.foto_alumno.trim()) {
+        const urlFotoAlumno = convertirUrlDrive(reg.foto_alumno.trim());
+        if (urlFotoAlumno) {
+            html += `<div class="imagen-section" style="animation-delay:0.17s"><div class="imagen-container"><img src="${urlFotoAlumno}" alt="Foto del alumno" loading="lazy" onerror="this.parentElement.parentElement.style.display='none';" /></div></div>`;
+        }
     }
 
     // ── 4. Tarea ──
@@ -1986,6 +2025,25 @@ function buscarRegistroPorFecha(inputValue) {
 // ══════════════════════════════════════════════
 //  ARRANCAR
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  CONVERTIR URL DE GOOGLE DRIVE A THUMBNAIL
+// ══════════════════════════════════════════════
+function convertirUrlDrive(url) {
+    if (!url || !url.includes('http')) return '';
+    // Formato: https://drive.google.com/uc?id=FILE_ID
+    // Convertir a: https://lh3.googleusercontent.com/d/FILE_ID
+    const matchUc = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (matchUc) {
+        return `https://lh3.googleusercontent.com/d/${matchUc[1]}`;
+    }
+    // Formato: https://drive.google.com/file/d/FILE_ID/view
+    const matchFile = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchFile) {
+        return `https://lh3.googleusercontent.com/d/${matchFile[1]}`;
+    }
+    return url;
+}
+
 // ══════════════════════════════════════════════
 //  CONVERTIR URLs EN ENLACES CLICKEABLES
 // ══════════════════════════════════════════════
