@@ -1398,38 +1398,40 @@ function extraerMateria(str) {
 // Nueva función: parsear múltiples materias con notas del campo "Avance del niño"
 function parsearAvances(avanceTexto) {
     /*
-     * Entrada: "Refuerzo de Comunicación B
-Lectura C"
+     * Entrada: "Refuerzo de Comunicación B\nLectura C"
      * Salida: [
      *   { materia: "Refuerzo de Comunicación", nivel: "B" },
      *   { materia: "Lectura", nivel: "C" }
      * ]
      */
     if (!avanceTexto || !avanceTexto.trim()) return [];
-    
-    const lineas = avanceTexto.split('\n').map(l => l.trim()).filter(l => l);
-    const avances = [];
-    
-    lineas.forEach(linea => {
-        const match = linea.match(/^(.+?)\s+(AD|A|B|C)$/);
-        if (match) {
-            avances.push({
-                materia: match[1].trim(),
-                nivel: match[2]
-            });
-        } else {
-            // Si no matchea el patrón, intentar capturar al menos el nivel
-            const soloNivel = linea.match(/\b(AD|A|B|C)\b/);
-            if (soloNivel) {
-                avances.push({
-                    materia: linea.replace(/\s*(AD|A|B|C)\s*/, '').trim() || 'Sin especificar',
-                    nivel: soloNivel[1]
-                });
+
+    return avanceTexto
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(linea => {
+            const match = linea.match(/^(.*?)(?:[:\-–—]\s*)?\b(AD|A|B|C)\s*$/i);
+            if (match) {
+                return {
+                    materia: match[1].trim(),
+                    nivel: match[2].toUpperCase()
+                };
             }
-        }
-    });
-    
-    return avances;
+
+            const soloNivel = linea.match(/\b(AD|A|B|C)\b/i);
+            if (soloNivel) {
+                return {
+                    materia: linea
+                        .replace(new RegExp(`\\b${soloNivel[1]}\\b`, 'i'), '')
+                        .replace(/[:\-–—]\s*$/, '')
+                        .trim() || 'Sin especificar',
+                    nivel: soloNivel[1].toUpperCase()
+                };
+            }
+
+            return { materia: linea, nivel: '' };
+        });
 }
 
 function formatearFecha(str) {
